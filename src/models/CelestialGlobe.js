@@ -988,6 +988,24 @@ export class CelestialGlobeModel {
     this.horizonGroup.quaternion.setFromUnitVectors(upDefault, this.zenithVec);
     this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
 
+    // 2b. 根據太陽是否位於觀測者地平面以上 (sun.altitude >= 0)，動態切換地平面上下半球的天球晝夜顏色：
+    // - 日出後～日落前 (sun.altitude >= 0)：上半球 (太陽所在側) 為亮天空藍，下半球為夜幕灰
+    // - 日落後～日出前 (sun.altitude < 0，太陽沒入地平線以下)：上半球轉為夜幕灰，下半球 (太陽所在側) 轉為亮天空藍
+    const isDayAtObserver = ephemeris.sun.altitude >= 0;
+    if (this.upperDomeMesh && this.lowerDomeMesh) {
+      if (isDayAtObserver) {
+        this.upperDomeMesh.material.color.setHex(0x38bdf8);
+        this.upperDomeMesh.material.opacity = 0.25;
+        this.lowerDomeMesh.material.color.setHex(0x475569);
+        this.lowerDomeMesh.material.opacity = 0.34;
+      } else {
+        this.upperDomeMesh.material.color.setHex(0x475569);
+        this.upperDomeMesh.material.opacity = 0.34;
+        this.lowerDomeMesh.material.color.setHex(0x38bdf8);
+        this.lowerDomeMesh.material.opacity = 0.25;
+      }
+    }
+
     // 3. 更新太陽在天球與黃道上的位置，並同步地球日照光源方向（真實呈現地球向陽面白晝與背陽面黑夜）
     const sunPos = raDecToVector3(ephemeris.sun.ra, ephemeris.sun.dec, GLOBE_RADIUS * 0.99);
     this.sunMesh.position.copy(sunPos);
