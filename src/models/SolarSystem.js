@@ -424,31 +424,65 @@ export class SolarSystemModel {
     southCap.position.set(0, -axisHalfLen, 0);
     earthTiltGroup.add(southCap);
 
-    // 4. 北極軸周圍的由西向東自轉方向環 (Counter-clockwise Rotation Ring)
-    const rotRingPts = [];
-    const rotR = 0.68;
-    const rotY = earthR * 1.65;
-    for (let deg = 0; deg <= 290; deg += 10) {
+    // 4. 北極軸周圍的「由西向東（北極俯視逆時針）」自轉方向立體圓弧與方向箭頭
+    const rotR = earthR * 0.62;
+    const rotY = earthR * 1.68;
+    const startDeg = 15;
+    const endDeg = 300;
+    const rotCurvePts = [];
+    for (let deg = startDeg; deg <= endDeg; deg += 5) {
       const rad = THREE.MathUtils.degToRad(deg);
-      rotRingPts.push(new THREE.Vector3(Math.cos(rad) * rotR, rotY, -Math.sin(rad) * rotR));
+      // 繞 +Y 軸正向自轉（由西向東）：由 +X 轉向 -Z，即 (cos(θ), y, -sin(θ))
+      rotCurvePts.push(new THREE.Vector3(Math.cos(rad) * rotR, rotY, -Math.sin(rad) * rotR));
     }
-    const rotRingLine = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(rotRingPts),
-      new THREE.LineBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.9 })
-    );
-    earthTiltGroup.add(rotRingLine);
+    const rotCurve = new THREE.CatmullRomCurve3(rotCurvePts);
+    const rotTubeGeo = new THREE.TubeGeometry(rotCurve, 48, 0.065, 12, false);
+    const rotTubeMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+    const rotTubeMesh = new THREE.Mesh(rotTubeGeo, rotTubeMat);
+    rotTubeMesh.userData = shaftMesh.userData;
+    this.pickables.push(rotTubeMesh);
+    earthTiltGroup.add(rotTubeMesh);
 
-    // 5. 地球傾斜赤道環 (Tilted Equatorial Plane Ring)
+    // 北極自轉圓弧前端的 3D 方向箭頭錐 (指向切線方向: (-sin(θ), 0, -cos(θ)))
+    const endRad = THREE.MathUtils.degToRad(endDeg);
+    const tipPos = new THREE.Vector3(Math.cos(endRad) * rotR, rotY, -Math.sin(endRad) * rotR);
+    const tangentDir = new THREE.Vector3(-Math.sin(endRad), 0, -Math.cos(endRad)).normalize();
+    const rotArrowGeo = new THREE.ConeGeometry(0.24, 0.62, 16);
+    const rotArrowMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+    const rotArrowCone = new THREE.Mesh(rotArrowGeo, rotArrowMat);
+    rotArrowCone.position.copy(tipPos).addScaledVector(tangentDir, 0.18);
+    rotArrowCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangentDir);
+    rotArrowCone.userData = shaftMesh.userData;
+    this.pickables.push(rotArrowCone);
+    earthTiltGroup.add(rotArrowCone);
+
+    // 5. 地球傾斜赤道環與 4 個由西向東自轉方向箭頭 (Tilted Equatorial Ring + Rotation Arrows)
+    const eqR = earthR * 1.26;
     const eqRingPts = [];
-    for (let deg = 0; deg <= 360; deg += 4) {
+    for (let deg = 0; deg <= 360; deg += 3) {
       const rad = THREE.MathUtils.degToRad(deg);
-      eqRingPts.push(new THREE.Vector3(Math.cos(rad) * (earthR * 1.22), 0, Math.sin(rad) * (earthR * 1.22)));
+      eqRingPts.push(new THREE.Vector3(Math.cos(rad) * eqR, 0, -Math.sin(rad) * eqR));
     }
     const eqRingLine = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(eqRingPts),
-      new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 })
+      new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 })
     );
     earthTiltGroup.add(eqRingLine);
+
+    // 在赤道環四個象限配置鮮明的由西向東自轉方向箭頭錐
+    const eqArrowGeo = new THREE.ConeGeometry(0.22, 0.58, 16);
+    const eqArrowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    [45, 135, 225, 315].forEach((deg) => {
+      const rad = THREE.MathUtils.degToRad(deg);
+      const pos = new THREE.Vector3(Math.cos(rad) * eqR, 0, -Math.sin(rad) * eqR);
+      const tan = new THREE.Vector3(-Math.sin(rad), 0, -Math.cos(rad)).normalize();
+      const arrow = new THREE.Mesh(eqArrowGeo, eqArrowMat);
+      arrow.position.copy(pos);
+      arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan);
+      arrow.userData = shaftMesh.userData;
+      this.pickables.push(arrow);
+      earthTiltGroup.add(arrow);
+    });
 
     // 6. 黃道面垂直法線參考虛線 (置於不傾斜的 earthSystemGroup，方便與傾斜地軸對照 23.44° 夾角)
     const eclNormalPts = [
@@ -480,10 +514,10 @@ export class SolarSystemModel {
     );
     earthSystemGroup.add(arcLine);
 
-    // 8. 地球自轉軸 3D 標籤 (綁定於北極箭頭尖端上方)
+    // 8. 地球自轉軸與自轉方向 3D 標籤 (綁定於北極箭頭尖端上方)
     const axisDiv = document.createElement('div');
     axisDiv.className = 'celestial-label zodiac-label';
-    axisDiv.innerHTML = `🧭 地軸北極 N <small>傾角 23.44°</small>`;
+    axisDiv.innerHTML = `🧭 地軸北極 N ↺ <small>傾角 23.44° ｜ 由西向東自轉</small>`;
     axisDiv.addEventListener('click', (e) => {
       e.stopPropagation();
       if (this.onSelectBody) this.onSelectBody(null, shaftMesh.userData);
