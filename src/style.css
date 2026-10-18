@@ -15,7 +15,7 @@
 
   /* 全站統一明體 (Mingti / Songti Serif) 與三階字級規範：標題、副標題、內容 */
   --font-ming: "Songti TC", "STSong", "LiSong Pro", "PMingLiU", "MingLiU", "Noto Serif TC", "Source Han Serif TC", serif;
-  --fs-title: 18px;     /* 1. 標題字級 */
+  --fs-title: 27px;     /* 1. 標題字級 (加大 50%) */
   --fs-subtitle: 14px;  /* 2. 副標題字級 */
   --fs-content: 12px;   /* 3. 內容字級 */
 }
@@ -97,22 +97,22 @@ button, input, select, textarea {
 .brand-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .brand-logo {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
+  width: 57px;
+  height: 57px;
+  border-radius: 10px;
   object-fit: cover;
   border: 1px solid rgba(245, 158, 11, 0.55);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
 }
 
 .panel-header h1 {
   font-size: var(--fs-title);
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 .panel-header h1 small,
@@ -389,7 +389,7 @@ input:focus {
 }
 
 .info-value-large {
-  font-size: var(--fs-title);
+  font-size: var(--fs-subtitle);
   font-weight: 700;
   color: #fde68a;
   margin-bottom: 2px;
