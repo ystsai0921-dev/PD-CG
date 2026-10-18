@@ -753,3 +753,54 @@ input:focus {
   font-weight: 700;
   font-size: var(--fs-subtitle);
 }
+
+/* L1 天球天頂 90° 旋轉符號按鈕 */
+.zenith-rotate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(6, 78, 59, 0.92);
+  border: 1.5px solid #34d399;
+  color: #ecfdf5;
+  font-family: var(--font-ming);
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.45);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.zenith-rotate-btn:hover {
+  background: rgba(5, 150, 105, 0.98);
+  border-color: #fde047;
+  color: #fef08a;
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(250, 204, 21, 0.55);
+  z-index: 20;
+}
+
+.zenith-rotate-btn:active {
+  transform: scale(0.96);
+}
+
+.zenith-rotate-btn .rot-icon {
+  display: inline-block;
+  font-size: var(--fs-subtitle);
+  transition: transform 0.35s ease;
+}
+
+.zenith-rotate-btn:hover .rot-icon {
+  transform: rotate(90deg);
+}
+
+.zenith-rotate-btn small {
+  font-size: var(--fs-content);
+  color: #a7f3d0;
+  font-weight: 400;
+}
+

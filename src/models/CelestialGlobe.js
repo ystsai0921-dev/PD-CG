@@ -36,6 +36,11 @@ export class CelestialGlobeModel {
     );
 
     this.planetMeshes = {};
+    this.zenithVec = new THREE.Vector3(0, 1, 0);
+    this.zenithSpinSteps = 0;
+    this.currentZenithAngle = 0;
+    this.targetZenithAngle = 0;
+
     this._buildEarthCenter();
     this._buildStarfieldBackground();
     this._buildEquatorialGrid();
@@ -429,19 +434,95 @@ export class CelestialGlobeModel {
     });
     this.horizonGroup.add(new THREE.Line(borderGeo, borderMat));
 
-    // 天頂向量箭頭 (Zenith Arrow)
-    const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, GLOBE_RADIUS * 0.995, 0)];
+    // 天頂向量箭頭軸線 (Zenith Normal Axis，垂直於地平面切面)
+    const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, GLOBE_RADIUS * 1.03, 0)];
     const zenithGeo = new THREE.BufferGeometry().setFromPoints(zenithPts);
     const zenithMat = new THREE.LineDashedMaterial({
       color: 0x34d399,
       dashSize: 2,
       gapSize: 1.5,
       transparent: true,
-      opacity: 0.75
+      opacity: 0.85
     });
     const zenithLine = new THREE.Line(zenithGeo, zenithMat);
     zenithLine.computeLineDistances();
     this.horizonGroup.add(zenithLine);
+
+    // 4. 天頂 3D 旋轉軸頂錐與環形旋轉指標 (可點擊對著垂直地平面切面的天頂軸作 90° 旋轉)
+    const zenithCapGroup = new THREE.Group();
+    zenithCapGroup.position.set(0, GLOBE_RADIUS * 1.01, 0);
+
+    const coneGeo = new THREE.ConeGeometry(1.4, 3.2, 18);
+    const coneMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
+    const coneMesh = new THREE.Mesh(coneGeo, coneMat);
+    coneMesh.position.set(0, 1.2, 0);
+    coneMesh.userData = { isZenithRotator: true };
+    this.pickables.push(coneMesh);
+    zenithCapGroup.add(coneMesh);
+
+    const torusGeo = new THREE.TorusGeometry(3.2, 0.32, 12, 32, Math.PI * 1.65);
+    torusGeo.rotateX(Math.PI / 2);
+    const torusMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+    this.zenithRingMesh = new THREE.Mesh(torusGeo, torusMat);
+    this.zenithRingMesh.userData = { isZenithRotator: true };
+    this.pickables.push(this.zenithRingMesh);
+    zenithCapGroup.add(this.zenithRingMesh);
+
+    this.horizonGroup.add(zenithCapGroup);
+
+    // 5. 天頂互動式「🔄 旋轉 90°」符號按鈕 (CSS2DObject)
+    const rotBtnDiv = document.createElement('div');
+    rotBtnDiv.className = 'zenith-rotate-btn';
+    rotBtnDiv.title = '點擊使天球繞垂直地平面切面的天頂軸旋轉 90°';
+    rotBtnDiv.innerHTML = `<span class="rot-icon">🔄</span> 天頂軸旋轉 +90° <small id="zenith-angle-badge">(0°)</small>`;
+    rotBtnDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.rotateAroundZenithBy90();
+    });
+    this.zenithRotateBtnDiv = rotBtnDiv;
+    this.zenithRotateLabel = new CSS2DObject(rotBtnDiv);
+    this.zenithRotateLabel.position.set(0, GLOBE_RADIUS + 8.5, 0);
+    this.horizonGroup.add(this.zenithRotateLabel);
+    this.labels.push(this.zenithRotateLabel);
+  }
+
+  /**
+   * 每次點擊天頂旋轉符號時，使整個天球對著垂直地平面切面的天頂軸 (Zenith Axis) 旋轉 90°
+   */
+  rotateAroundZenithBy90() {
+    this.zenithSpinSteps += 1;
+    this.targetZenithAngle = this.zenithSpinSteps * (Math.PI / 2);
+
+    const degNorm = (this.zenithSpinSteps * 90) % 360;
+    if (this.zenithRotateBtnDiv) {
+      this.zenithRotateBtnDiv.innerHTML = `<span class="rot-icon">🔄</span> 天頂軸旋轉 +90° <small>(${degNorm}°)</small>`;
+    }
+
+    if (this.onSelectObject) {
+      this.onSelectObject({
+        type: 'ZenithRotation',
+        title: '🔄 天頂軸 90° 旋轉 (Zenith Axis 90° Rotation)',
+        subtitle: `垂直地平面切面法線軸 ｜ 目前累計旋轉角度：${degNorm}°`,
+        details:
+          '以觀測者天頂（Zenith，垂直於地平面切面的法線軸）為旋轉軸心，將天球每次旋轉 90°。\n旋轉過程中地平面切面保持原有傾角平面不變，方便您依序從東、南、西、北四個不同方位側面檢視天球上的黃道十二宮與星座。'
+      });
+    }
+  }
+
+  /**
+   * 於每幀平滑插值天球繞天頂軸的 90° 旋轉動畫
+   */
+  animateZenithRotation() {
+    const diff = this.targetZenithAngle - this.currentZenithAngle;
+    if (Math.abs(diff) > 0.0005) {
+      this.currentZenithAngle += diff * 0.14;
+      if (this.zenithRingMesh) {
+        this.zenithRingMesh.rotation.y += 0.12;
+      }
+    } else {
+      this.currentZenithAngle = this.targetZenithAngle;
+    }
+    this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
   }
 
   _buildDynamicSkyBodies() {
@@ -498,10 +579,19 @@ export class CelestialGlobeModel {
     if (options.ecliptic !== undefined) this.eclipticGroup.visible = options.ecliptic;
     if (options.equator !== undefined) this.equatorGroup.visible = options.equator;
     if (options.otherConst !== undefined) this.otherConstGroup.visible = options.otherConst;
-    if (options.horizonPlane !== undefined) this.horizonGroup.visible = options.horizonPlane;
+    if (options.horizonPlane !== undefined) {
+      this.horizonGroup.visible = options.horizonPlane;
+      if (this.zenithRotateLabel) {
+        this.zenithRotateLabel.element.style.display = options.horizonPlane ? '' : 'none';
+      }
+    }
     if (options.labels !== undefined) {
       this.labels.forEach((lbl) => {
-        lbl.element.style.display = options.labels ? '' : 'none';
+        if (lbl === this.zenithRotateLabel) {
+          lbl.element.style.display = this.horizonGroup.visible ? '' : 'none';
+        } else {
+          lbl.element.style.display = options.labels ? '' : 'none';
+        }
       });
     }
   }
@@ -532,9 +622,10 @@ export class CelestialGlobeModel {
     };
 
     // 2. 更新觀測者地平面切面方向 (當地天頂 Zenith 的赤經 = LST, 赤緯 = Lat)
-    const zenithVec = raDecToVector3(ephemeris.lstHours, ephemeris.lat, 1).normalize();
+    this.zenithVec.copy(raDecToVector3(ephemeris.lstHours, ephemeris.lat, 1).normalize());
     const upDefault = new THREE.Vector3(0, 1, 0);
-    this.horizonGroup.quaternion.setFromUnitVectors(upDefault, zenithVec);
+    this.horizonGroup.quaternion.setFromUnitVectors(upDefault, this.zenithVec);
+    this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
 
     // 3. 更新太陽在天球與黃道上的位置，並同步地球日照光源方向（真實呈現地球向陽面白晝與背陽面黑夜）
     const sunPos = raDecToVector3(ephemeris.sun.ra, ephemeris.sun.dec, GLOBE_RADIUS * 0.99);

@@ -111,6 +111,10 @@ export class SceneManager {
     if (hits.length > 0) {
       const obj = hits[0].object;
       if (obj.userData) {
+        if (this.currentScale === 'celestial' && obj.userData.isZenithRotator) {
+          this.celestialModel.rotateAroundZenithBy90();
+          return;
+        }
         if (this.currentScale === 'solar' && obj.userData.bodyId) {
           this.setSolarTarget(obj.userData.bodyId);
           if (this.callbacks.onSolarTargetChange) {
@@ -141,6 +145,10 @@ export class SceneManager {
 
     // 隱藏非當前尺度的 CSS2D 標籤
     this._setLabelsVisible(this.celestialModel.labels, isCelestial && this.celestialLabelsEnabled !== false);
+    if (isCelestial && this.celestialModel.zenithRotateLabel) {
+      this.celestialModel.zenithRotateLabel.element.style.display =
+        this.celestialModel.horizonGroup.visible ? '' : 'none';
+    }
     this.solarModel.syncLabelsVisibility(isSolar);
     this._setLabelsVisible(this.horizonModel.labels, isHorizon);
 
@@ -206,8 +214,9 @@ export class SceneManager {
     }
     const found = ZODIAC_CONSTELLATIONS.find((c) => c.id === constellationId);
     if (found && found.centerDirection) {
-      // 將相機移至從地球往該星座延伸的外側位置，正面觀看該黃道星座與中心地球
-      this.controls.lookAtDirection(found.centerDirection, 210);
+      // 將相機移至從地球往該星座延伸的外側位置，正面觀看該黃道星座與中心地球（並考慮天頂軸旋轉後的姿態）
+      const worldDir = found.centerDirection.clone().applyQuaternion(this.celestialModel.group.quaternion);
+      this.controls.lookAtDirection(worldDir, 210);
       this._handleObjectSelect({
         type: 'Constellation',
         constellationId: found.id,
@@ -232,7 +241,9 @@ export class SceneManager {
 
   renderLoop() {
     requestAnimationFrame(() => this.renderLoop());
-    if (this.currentScale === 'horizon' && this.horizonModel) {
+    if (this.currentScale === 'celestial' && this.celestialModel) {
+      this.celestialModel.animateZenithRotation();
+    } else if (this.currentScale === 'horizon' && this.horizonModel) {
       this.horizonModel.animateFlagAndShadow(performance.now() * 0.001);
     }
     this.controls.update();
