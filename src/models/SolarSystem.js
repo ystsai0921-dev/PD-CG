@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js';
+import { createEarthTextures } from '../utils/earthTexture.js';
+import { createMoonTextures } from '../utils/moonTexture.js';
+import { OBLIQUITY_RAD, formatRA } from '../utils/astronomy.js';
 
 /**
  * Level 2: 太陽系行星運動模型 (Solar System Model)
@@ -11,7 +14,7 @@ const PLANET_CONFIG = [
   { id: 'Sun', nameZh: '太陽', nameEn: 'Sun', symbol: '☀', radius: 5.2, visualDist: 0, color: 0xfacc15, isStar: true },
   { id: 'Mercury', nameZh: '水星', nameEn: 'Mercury', symbol: '☿', radius: 1.0, visualDist: 12, color: 0xcbd5e1 },
   { id: 'Venus', nameZh: '金星', nameEn: 'Venus', symbol: '♀', radius: 1.45, visualDist: 19, color: 0xfde047 },
-  { id: 'Earth', nameZh: '地球', nameEn: 'Earth', symbol: '🌍', radius: 1.6, visualDist: 28, color: 0x3b82f6 },
+  { id: 'Earth', nameZh: '地球', nameEn: 'Earth', symbol: '🌍', radius: 2.0, visualDist: 28, color: 0x3b82f6 },
   { id: 'Mars', nameZh: '火星', nameEn: 'Mars', symbol: '♂', radius: 1.25, visualDist: 38, color: 0xef4444 },
   { id: 'Jupiter', nameZh: '木星', nameEn: 'Jupiter', symbol: '♃', radius: 3.1, visualDist: 54, color: 0xfdba74 },
   { id: 'Saturn', nameZh: '土星', nameEn: 'Saturn', symbol: '♄', radius: 2.6, visualDist: 72, color: 0xfef08a, hasRing: true },
@@ -20,7 +23,7 @@ const PLANET_CONFIG = [
 ];
 
 const MOON_CONFIG = [
-  { id: 'Moon', parent: 'Earth', nameZh: '月球', nameEn: 'Moon', symbol: '🌙', radius: 0.55, orbitR: 4.2, periodDays: 27.32166, color: 0xe2e8f0 },
+  { id: 'Moon', parent: 'Earth', nameZh: '月球', nameEn: 'Moon', symbol: '🌙', radius: 0.72, orbitR: 4.8, periodDays: 27.32166, color: 0xe2e8f0 },
   { id: 'Io', parent: 'Jupiter', nameZh: '木衛一（伊奧）', nameEn: 'Io', symbol: 'Io', radius: 0.48, orbitR: 5.2, periodDays: 1.769, color: 0xfef08a },
   { id: 'Europa', parent: 'Jupiter', nameZh: '木衛二（歐羅巴）', nameEn: 'Europa', symbol: 'Eu', radius: 0.45, orbitR: 7.0, periodDays: 3.551, color: 0xbae6fd },
   { id: 'Titan', parent: 'Saturn', nameZh: '土衛六（泰坦）', nameEn: 'Titan', symbol: 'Ti', radius: 0.58, orbitR: 6.8, periodDays: 15.945, color: 0xfdba74 }
@@ -46,24 +49,90 @@ export class SolarSystemModel {
   }
 
   _buildSolarBodies() {
-    // 太陽中心點光源
-    const sunLight = new THREE.PointLight(0xffffff, 2.5, 500, 0.2);
+    // 太陽中心點光源 (照亮所有行星與月球的向陽面與地形凹凸陰影)
+    const sunLight = new THREE.PointLight(0xfffbeb, 3.2, 600, 0.12);
     this.group.add(sunLight);
 
+    const earthTex = createEarthTextures();
+    const moonTex = createMoonTextures();
+
     PLANET_CONFIG.forEach((cfg) => {
-      const geo = new THREE.SphereGeometry(cfg.radius, 28, 24);
-      const mat = cfg.isStar
-        ? new THREE.MeshBasicMaterial({ color: cfg.color })
-        : new THREE.MeshStandardMaterial({
-            color: cfg.color,
-            roughness: 0.6,
-            metalness: 0.1,
-            emissive: cfg.color,
-            emissiveIntensity: 0.18
-          });
+      const isEarth = cfg.id === 'Earth';
+      const geo = new THREE.SphereGeometry(cfg.radius, isEarth ? 64 : 28, isEarth ? 48 : 24);
+
+      let mat;
+      if (cfg.isStar) {
+        mat = new THREE.MeshBasicMaterial({ color: cfg.color });
+      } else if (isEarth) {
+        // L2 地球：真實呈現藍色海洋、各大洲陸地與地形凹凸貼圖
+        mat = new THREE.MeshStandardMaterial({
+          map: earthTex.colorMap,
+          bumpMap: earthTex.bumpMap,
+          bumpScale: 0.14,
+          roughness: 0.55,
+          metalness: 0.08,
+          emissive: 0x0b1d3a,
+          emissiveMap: earthTex.colorMap,
+          emissiveIntensity: 0.25
+        });
+      } else {
+        mat = new THREE.MeshStandardMaterial({
+          color: cfg.color,
+          roughness: 0.6,
+          metalness: 0.1,
+          emissive: cfg.color,
+          emissiveIntensity: 0.18
+        });
+      }
 
       const mesh = new THREE.Mesh(geo, mat);
-      this.bodiesGroup.add(mesh);
+
+      // 若為地球，建立地軸傾角 (23.44°) 容器與自轉子球體，使陸地海洋自轉姿態與真實恆星時一致
+      let earthTiltGroup = null;
+      if (isEarth) {
+        earthTiltGroup = new THREE.Group();
+        // 在黃道座標系中 (+X 春分點, -Z 黃經 90° 夏至方向, +Y 黃道北極)：
+        // 地球北極向 -Z (夏至時北半球傾向太陽，即 RA=18h/-90° 方向) 傾斜 23.44°，對應繞 X 軸旋轉 -OBLIQUITY_RAD
+        earthTiltGroup.rotation.x = -OBLIQUITY_RAD;
+        earthTiltGroup.add(mesh);
+        this.bodiesGroup.add(earthTiltGroup);
+
+        // 地球淡藍色大氣光暈與地軸線
+        const atmoGeo = new THREE.SphereGeometry(cfg.radius * 1.04, 32, 24);
+        const atmoMat = new THREE.MeshBasicMaterial({
+          color: 0x38bdf8,
+          transparent: true,
+          opacity: 0.15,
+          side: THREE.BackSide,
+          depthWrite: false
+        });
+        mesh.add(new THREE.Mesh(atmoGeo, atmoMat));
+
+        const axisGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, -cfg.radius * 1.65, 0),
+          new THREE.Vector3(0, cfg.radius * 1.65, 0)
+        ]);
+        const axisMat = new THREE.LineDashedMaterial({
+          color: 0x60a5fa,
+          dashSize: 0.5,
+          gapSize: 0.3,
+          transparent: true,
+          opacity: 0.65
+        });
+        const axisLine = new THREE.Line(axisGeo, axisMat);
+        axisLine.computeLineDistances();
+        earthTiltGroup.add(axisLine);
+
+        // 觀測者地表釘選紅點
+        this.earthObserverPin = new THREE.Mesh(
+          new THREE.SphereGeometry(0.14, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+        );
+        mesh.add(this.earthObserverPin);
+      } else {
+        this.bodiesGroup.add(mesh);
+      }
+
       this.pickables.push(mesh);
 
       if (cfg.hasRing) {
@@ -102,18 +171,31 @@ export class SolarSystemModel {
         }
       );
 
-      this.bodyMap[cfg.id] = { cfg, mesh, label, worldPos: new THREE.Vector3() };
+      this.bodyMap[cfg.id] = { cfg, mesh, earthTiltGroup, label, worldPos: new THREE.Vector3() };
     });
 
     // 建立主要衛星 (月球、木衛、土衛)
     MOON_CONFIG.forEach((mCfg) => {
-      const geo = new THREE.SphereGeometry(mCfg.radius, 18, 18);
-      const mat = new THREE.MeshStandardMaterial({
-        color: mCfg.color,
-        roughness: 0.7,
-        emissive: mCfg.color,
-        emissiveIntensity: 0.2
-      });
+      const isLunar = mCfg.id === 'Moon';
+      const geo = new THREE.SphereGeometry(mCfg.radius, isLunar ? 48 : 18, isLunar ? 48 : 18);
+      const mat = isLunar
+        ? new THREE.MeshStandardMaterial({
+            map: moonTex.colorMap,
+            bumpMap: moonTex.bumpMap,
+            bumpScale: 0.16,
+            roughness: 0.88,
+            metalness: 0.02,
+            emissive: 0x1e293b,
+            emissiveMap: moonTex.colorMap,
+            emissiveIntensity: 0.14
+          })
+        : new THREE.MeshStandardMaterial({
+            color: mCfg.color,
+            roughness: 0.7,
+            emissive: mCfg.color,
+            emissiveIntensity: 0.2
+          });
+
       const mesh = new THREE.Mesh(geo, mat);
       this.bodiesGroup.add(mesh);
       this.pickables.push(mesh);
@@ -132,7 +214,13 @@ export class SolarSystemModel {
         opacity: 0.45
       });
       const mOrbitLine = new THREE.Line(mOrbitGeo, mOrbitMat);
-      parentObj.mesh.add(mOrbitLine);
+      if (parentObj.earthTiltGroup) {
+        // 地球的衛星軌道置於黃道水平面容器而非傾斜地軸下
+        this.orbitsGroup.add(mOrbitLine);
+        this.earthMoonOrbitLine = mOrbitLine;
+      } else {
+        parentObj.mesh.add(mOrbitLine);
+      }
 
       const label = this._createLabel(
         `${mCfg.symbol} ${mCfg.nameZh} <small>${mCfg.nameEn}</small>`,
@@ -236,7 +324,28 @@ export class SolarSystemModel {
       const y = r * Math.sin(bet) * 2.0; // 微幅放大黃緯傾角以便觀察軌道立體感
       const z = -r * Math.cos(bet) * Math.sin(lam);
 
-      entry.mesh.position.set(x, y, z);
+      if (entry.earthTiltGroup) {
+        entry.earthTiltGroup.position.set(x, y, z);
+        entry.mesh.position.set(0, 0, 0);
+        // 根據格林威治恆星時 (GST) 旋轉地球，並更新觀測者紅點座標
+        entry.mesh.rotation.y = THREE.MathUtils.degToRad(ephemeris.gstHours * 15);
+        if (this.earthObserverPin) {
+          const latRad = THREE.MathUtils.degToRad(ephemeris.lat);
+          const lonRad = THREE.MathUtils.degToRad(ephemeris.lon);
+          const rPin = cfg.radius + 0.05;
+          this.earthObserverPin.position.set(
+            rPin * Math.cos(latRad) * Math.cos(lonRad),
+            rPin * Math.sin(latRad),
+            -rPin * Math.cos(latRad) * Math.sin(lonRad)
+          );
+        }
+        if (this.earthMoonOrbitLine) {
+          this.earthMoonOrbitLine.position.set(x, y, z);
+        }
+      } else {
+        entry.mesh.position.set(x, y, z);
+      }
+
       entry.worldPos.set(x, y, z);
       entry.label.position.set(x, y + cfg.radius + 1.8, z);
 
@@ -245,11 +354,13 @@ export class SolarSystemModel {
         bodyId: cfg.id,
         title: `${cfg.symbol} ${cfg.nameZh} (${cfg.nameEn})`,
         subtitle: `日心距離: ${h.rAU.toFixed(3)} AU`,
-        details: `日心黃經: ${h.elon.toFixed(2)}° | 日心黃緯: ${h.elat.toFixed(2)}°\n點擊可將相機視點鎖定於 ${cfg.nameZh}。`
+        details: cfg.id === 'Earth'
+          ? `日心黃經: ${h.elon.toFixed(2)}° | 地軸傾角: 23.44° | 恆星時 GST: ${formatRA(ephemeris.gstHours)}\n表面呈現真實海洋陸地、晝夜受光與觀測點位置。`
+          : `日心黃經: ${h.elon.toFixed(2)}° | 日心黃緯: ${h.elat.toFixed(2)}°\n點擊可將相機視點鎖定於 ${cfg.nameZh}。`
       };
     });
 
-    // 2. 更新衛星繞行位置
+    // 2. 更新衛星繞行位置與月球潮汐鎖定正面朝向地球
     const daysSinceJ2000 = (ephemeris.date.getTime() - Date.UTC(2000, 0, 1, 12, 0, 0)) / 86400000;
     MOON_CONFIG.forEach((mCfg) => {
       const entry = this.bodyMap[mCfg.id];
@@ -273,12 +384,20 @@ export class SolarSystemModel {
       entry.worldPos.set(px, py, pz);
       entry.label.position.set(px, py + mCfg.radius + 1.2, pz);
 
+      // 若為月球，將月球正面 (+Z 軸：風暴洋、雨海、澄海、靜海、危海) 永遠潮汐鎖定朝向地球中心
+      if (mCfg.id === 'Moon') {
+        entry.mesh.up.set(0, 1, 0);
+        entry.mesh.lookAt(parentEntry.worldPos);
+      }
+
       entry.mesh.userData = {
         type: 'SolarBody',
         bodyId: mCfg.id,
         title: `${mCfg.symbol} ${mCfg.nameZh} (${mCfg.nameEn})`,
         subtitle: `所屬行星：${parentEntry.cfg.nameZh} | 公轉週期 ${mCfg.periodDays} 天`,
-        details: `目前做為 ${parentEntry.cfg.nameZh} 的天然衛星運轉中。可設為太陽系視角觀察中心。`
+        details: mCfg.id === 'Moon'
+          ? `月相：${ephemeris.moon.phaseName} (照明率 ${(ephemeris.moon.fraction * 100).toFixed(1)}%)\n表面呈現真實月海與環形山凹凸陰影，且月球正面永遠潮汐鎖定朝向地球。`
+          : `目前做為 ${parentEntry.cfg.nameZh} 的天然衛星運轉中。可設為太陽系視角觀察中心。`
       };
     });
   }
