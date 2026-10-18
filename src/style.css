@@ -804,7 +804,7 @@ input:focus {
   font-weight: 400;
 }
 
-/* L1 點擊星座後顯現的各顆恆星名字與視星等標籤（閃爍三下後維持高亮） */
+/* L1 點擊星座後顯現的各顆恆星名字與視星等標籤（閃爍三下後光暈消失、標籤維持清晰） */
 .star-detail-label {
   color: #fef9c3;
   font-family: var(--font-ming);
@@ -814,7 +814,7 @@ input:focus {
   border-radius: 4px;
   background: rgba(15, 23, 42, 0.92);
   border: 1px solid #facc15;
-  box-shadow: 0 0 12px rgba(254, 240, 138, 0.85);
+  box-shadow: none;
   pointer-events: auto;
   cursor: pointer;
   white-space: nowrap;
@@ -831,12 +831,12 @@ input:focus {
   font-size: var(--fs-content);
 }
 
-/* 選中星座或行星時的主標籤（閃爍三下後維持高亮外框） */
+/* 選中星座或行星時的主標籤（閃爍三下後光暈消失、維持高亮清晰外框） */
 .celestial-label.active-blink-label {
-  border-color: #ffffff !important;
+  border-color: #fde047 !important;
   color: #ffffff !important;
   background: rgba(180, 83, 9, 0.94) !important;
-  box-shadow: 0 0 16px rgba(254, 240, 138, 0.95);
+  box-shadow: none;
   z-index: 18;
   animation: starLabelPulse 0.55s ease-in-out 3 forwards;
 }
@@ -848,15 +848,15 @@ input:focus {
 
 @keyframes starLabelPulse {
   0% {
-    box-shadow: 0 0 4px rgba(250, 204, 21, 0.35);
-    border-color: rgba(250, 204, 21, 0.55);
+    box-shadow: 0 0 0px rgba(250, 204, 21, 0);
+    border-color: rgba(250, 204, 21, 0.65);
   }
   50% {
-    box-shadow: 0 0 18px rgba(254, 240, 138, 1);
+    box-shadow: 0 0 18px rgba(254, 240, 138, 0.98);
     border-color: #ffffff;
   }
   100% {
-    box-shadow: 0 0 15px rgba(254, 240, 138, 0.92);
+    box-shadow: 0 0 0px rgba(250, 204, 21, 0);
     border-color: #fde047;
   }
 }

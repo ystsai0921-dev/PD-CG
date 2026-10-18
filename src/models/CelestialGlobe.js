@@ -796,39 +796,57 @@ export class CelestialGlobeModel {
     }
     this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
 
-    // 若有選中的星座或行星，執行閃爍三下後維持高亮的動畫
+    // 若有選中的星座或行星，執行閃爍三下後光暈消失、星體維持高亮的動畫
     if (this.activeHighlight) {
       const elapsed = Math.max(0, timeSec - (this.activeHighlight.startTime || 0));
       const totalBlinkDuration = 1.65;
-      // 經歷 3 次亮起峰值 (1π, 3π, 5π) 後，於第 3 下峰值停住並維持 pulse = 1.0 恆定高亮
-      const pulse =
-        elapsed < totalBlinkDuration
-          ? 0.5 - 0.5 * Math.cos((elapsed / totalBlinkDuration) * Math.PI * 5)
-          : 1.0;
+      const isBlinking = elapsed < totalBlinkDuration;
+
+      // 星體本身亮度：經歷 3 次閃爍後維持 pulse = 1.0 恆定高亮
+      const starPulse = isBlinking
+        ? 0.5 - 0.5 * Math.cos((elapsed / totalBlinkDuration) * Math.PI * 5)
+        : 1.0;
+
+      // 外圍光暈 (haloMesh)：經歷完整 3 下呼吸閃爍 (0 -> 1 -> 0 共 3 週期 = 6π) 後隨之熄滅消失
+      const haloPulse = isBlinking
+        ? 0.5 - 0.5 * Math.cos((elapsed / totalBlinkDuration) * Math.PI * 6)
+        : 0.0;
 
       if (this.activeHighlight.type === 'Constellation') {
         const entry = this.constellationMap[this.activeHighlight.constellationId];
         if (entry) {
-          entry.lineMat.opacity = 0.45 + pulse * 0.55;
-          entry.lineMat.color.lerpColors(entry.baseLineColorObj, this.flashWhiteColor, pulse * 0.7);
+          entry.lineMat.opacity = 0.45 + starPulse * 0.55;
+          entry.lineMat.color.lerpColors(entry.baseLineColorObj, this.flashWhiteColor, starPulse * 0.7);
           entry.starEntries.forEach((s) => {
             const isFocus =
               this.activeHighlight.focusStarName && s.star.name === this.activeHighlight.focusStarName;
-            const scaleAmp = isFocus ? 1.25 + pulse * 0.95 : 1.1 + pulse * 0.65;
+            const scaleAmp = isFocus ? 1.2 + starPulse * 0.45 : 1.05 + starPulse * 0.3;
             s.mesh.scale.setScalar(scaleAmp);
-            s.mesh.material.color.lerpColors(s.baseColorObj, this.flashWhiteColor, pulse * 0.85);
-            s.haloMesh.scale.setScalar(0.9 + pulse * 0.6);
-            s.haloMesh.material.opacity = 0.18 + pulse * 0.52;
+            s.mesh.material.color.lerpColors(s.baseColorObj, this.flashWhiteColor, starPulse * 0.85);
+            if (isBlinking) {
+              s.haloMesh.visible = true;
+              s.haloMesh.scale.setScalar(0.85 + haloPulse * 0.75);
+              s.haloMesh.material.opacity = haloPulse * 0.72;
+            } else {
+              s.haloMesh.visible = false;
+              s.haloMesh.material.opacity = 0;
+            }
           });
         }
       } else if (this.activeHighlight.type === 'Body') {
         const bEntry = this.dynamicBodyMap[this.activeHighlight.bodyId];
         if (bEntry) {
-          bEntry.mesh.scale.setScalar(1.1 + pulse * 0.65);
-          bEntry.mesh.material.color.lerpColors(bEntry.baseColorObj, this.flashWhiteColor, pulse * 0.8);
+          bEntry.mesh.scale.setScalar(1.05 + starPulse * 0.35);
+          bEntry.mesh.material.color.lerpColors(bEntry.baseColorObj, this.flashWhiteColor, starPulse * 0.8);
           if (bEntry.haloMesh) {
-            bEntry.haloMesh.scale.setScalar(0.9 + pulse * 0.65);
-            bEntry.haloMesh.material.opacity = 0.2 + pulse * 0.55;
+            if (isBlinking) {
+              bEntry.haloMesh.visible = true;
+              bEntry.haloMesh.scale.setScalar(0.85 + haloPulse * 0.8);
+              bEntry.haloMesh.material.opacity = haloPulse * 0.75;
+            } else {
+              bEntry.haloMesh.visible = false;
+              bEntry.haloMesh.material.opacity = 0;
+            }
           }
         }
       }
