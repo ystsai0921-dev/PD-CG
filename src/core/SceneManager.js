@@ -53,9 +53,11 @@ export class SceneManager {
 
     this.celestialModel = new CelestialGlobeModel((info) => this._handleObjectSelect(info));
     this.solarModel = new SolarSystemModel((bodyId, info) => {
-      this.setSolarTarget(bodyId);
-      if (this.callbacks.onSolarTargetChange) {
-        this.callbacks.onSolarTargetChange(bodyId);
+      if (bodyId) {
+        this.setSolarTarget(bodyId);
+        if (this.callbacks.onSolarTargetChange) {
+          this.callbacks.onSolarTargetChange(bodyId);
+        }
       }
       this._handleObjectSelect(info);
     });
