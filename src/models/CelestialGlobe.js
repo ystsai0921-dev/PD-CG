@@ -161,17 +161,6 @@ export class CelestialGlobeModel {
   }
 
   _buildEquatorialGrid() {
-    // 半透明外層天球殼
-    const shellGeo = new THREE.SphereGeometry(GLOBE_RADIUS, 48, 32);
-    const shellMat = new THREE.MeshBasicMaterial({
-      color: 0x1e3a8a,
-      transparent: true,
-      opacity: 0.04,
-      side: THREE.BackSide,
-      depthWrite: false
-    });
-    this.equatorGroup.add(new THREE.Mesh(shellGeo, shellMat));
-
     // 赤緯圈 (每 30 度一圈，赤道 0 度特別加亮)
     for (let dec = -60; dec <= 60; dec += 30) {
       const isEquator = dec === 0;
@@ -373,13 +362,53 @@ export class CelestialGlobeModel {
   }
 
   _buildObserverHorizon() {
-    // 觀測者地平面切面圓盤 (隨經緯度與恆星時旋轉法向量指向當地天頂 Zenith)
-    const ringGeo = new THREE.RingGeometry(EARTH_RADIUS + 0.8, GLOBE_RADIUS * 0.98, 64);
+    // 1. 地平面切面以上的天球上半球 (y >= 0)：採用亮一點的天空藍，代表觀測者可見的地上蒼穹
+    const upperDomeGeo = new THREE.SphereGeometry(
+      GLOBE_RADIUS * 0.995,
+      64,
+      32,
+      0,
+      Math.PI * 2,
+      0,
+      Math.PI / 2
+    );
+    const upperDomeMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8, // 亮天空藍 (Bright Sky Blue)
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    this.upperDomeMesh = new THREE.Mesh(upperDomeGeo, upperDomeMat);
+    this.horizonGroup.add(this.upperDomeMesh);
+
+    // 2. 地平面切面以下的天球下半球 (y <= 0)：採用夜幕灰，代表隱沒於地平線之下的地下天球
+    const lowerDomeGeo = new THREE.SphereGeometry(
+      GLOBE_RADIUS * 0.995,
+      64,
+      32,
+      0,
+      Math.PI * 2,
+      Math.PI / 2,
+      Math.PI / 2
+    );
+    const lowerDomeMat = new THREE.MeshBasicMaterial({
+      color: 0x475569, // 夜幕灰 (Night Curtain Slate Gray)
+      transparent: true,
+      opacity: 0.34,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    this.lowerDomeMesh = new THREE.Mesh(lowerDomeGeo, lowerDomeMat);
+    this.horizonGroup.add(this.lowerDomeMesh);
+
+    // 3. 觀測者地平面切面圓盤 (隨經緯度與恆星時旋轉法向量指向當地天頂 Zenith)
+    const ringGeo = new THREE.RingGeometry(EARTH_RADIUS + 0.8, GLOBE_RADIUS * 0.995, 64);
     ringGeo.rotateX(-Math.PI / 2);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x10b981,
       transparent: true,
-      opacity: 0.09,
+      opacity: 0.11,
       side: THREE.DoubleSide,
       depthWrite: false
     });
@@ -390,18 +419,18 @@ export class CelestialGlobeModel {
     const borderPts = [];
     for (let a = 0; a <= 360; a += 3) {
       const rad = THREE.MathUtils.degToRad(a);
-      borderPts.push(new THREE.Vector3(Math.cos(rad) * GLOBE_RADIUS * 0.98, 0, Math.sin(rad) * GLOBE_RADIUS * 0.98));
+      borderPts.push(new THREE.Vector3(Math.cos(rad) * GLOBE_RADIUS * 0.995, 0, Math.sin(rad) * GLOBE_RADIUS * 0.995));
     }
     const borderGeo = new THREE.BufferGeometry().setFromPoints(borderPts);
     const borderMat = new THREE.LineBasicMaterial({
       color: 0x34d399,
       transparent: true,
-      opacity: 0.6
+      opacity: 0.75
     });
     this.horizonGroup.add(new THREE.Line(borderGeo, borderMat));
 
     // 天頂向量箭頭 (Zenith Arrow)
-    const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, GLOBE_RADIUS * 0.98, 0)];
+    const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, GLOBE_RADIUS * 0.995, 0)];
     const zenithGeo = new THREE.BufferGeometry().setFromPoints(zenithPts);
     const zenithMat = new THREE.LineDashedMaterial({
       color: 0x34d399,

@@ -245,21 +245,34 @@ export class SkyScreenView {
     this.pointTargets = [];
     this.lineTargets = [];
 
-    // 1. 依據太陽仰角繪製深邃星空或晨昏白晝天幕背景
+    // 1. 依據太陽是否在日落前 (sunAlt >= 0°) 或日落後 (sunAlt < 0°) 明確區分天幕背景顏色
     const sunAlt = this.ephemeris.sun.altitude;
+    const isDaytimeBeforeSunset = sunAlt >= 0;
     const skyGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotH);
-    if (sunAlt > 6) {
-      skyGrad.addColorStop(0, '#0c1e3e');
-      skyGrad.addColorStop(0.6, '#153264');
-      skyGrad.addColorStop(1, '#1e4682');
-    } else if (sunAlt > -12) {
-      skyGrad.addColorStop(0, '#070d1d');
-      skyGrad.addColorStop(0.7, '#111c38');
-      skyGrad.addColorStop(1, '#2b244d');
+
+    if (isDaytimeBeforeSunset) {
+      if (sunAlt >= 10) {
+        // 日落前（白晝晴空）：明亮蔚藍天幕
+        skyGrad.addColorStop(0, '#1d63b8');
+        skyGrad.addColorStop(0.55, '#2b82d9');
+        skyGrad.addColorStop(1, '#58ace8');
+      } else {
+        // 日落前夕／日出晨曦（0° <= 太陽仰角 < 10°）：上方亮藍、地平線帶夕陽暖金光暈
+        skyGrad.addColorStop(0, '#1e5b9e');
+        skyGrad.addColorStop(0.55, '#367ec0');
+        skyGrad.addColorStop(0.85, '#6fa0c7');
+        skyGrad.addColorStop(1, '#c87d46');
+      }
+    } else if (sunAlt >= -6) {
+      // 日落後（民用暮光階段）：轉為深沉夜幕灰藍
+      skyGrad.addColorStop(0, '#161d29');
+      skyGrad.addColorStop(0.65, '#222c3c');
+      skyGrad.addColorStop(1, '#364152');
     } else {
-      skyGrad.addColorStop(0, '#03060f');
-      skyGrad.addColorStop(0.65, '#081021');
-      skyGrad.addColorStop(1, '#0e1b33');
+      // 日落後（夜晚星空）：夜幕灰黑，與日落前的亮藍天幕形成鮮明對比
+      skyGrad.addColorStop(0, '#11161f');
+      skyGrad.addColorStop(0.6, '#1b2230');
+      skyGrad.addColorStop(1, '#283244');
     }
 
     ctx.fillStyle = '#050811';
@@ -278,10 +291,13 @@ export class SkyScreenView {
     const observer = new Astronomy.Observer(this.ephemeris.lat, this.ephemeris.lon, 0);
 
     // 2. 繪製地平經緯網格並註冊中心方位子午線與地平線 Hover 說明
+    const gridMajorColor = isDaytimeBeforeSunset ? 'rgba(255, 255, 255, 0.30)' : 'rgba(148, 163, 184, 0.25)';
+    const gridMinorColor = isDaytimeBeforeSunset ? 'rgba(255, 255, 255, 0.15)' : 'rgba(148, 163, 184, 0.11)';
+
     ctx.lineWidth = 1;
     for (let alt = 0; alt <= 90; alt += 15) {
       const y = padTop + ((90 - alt) / 90) * plotH;
-      ctx.strokeStyle = alt % 30 === 0 ? 'rgba(100, 148, 218, 0.28)' : 'rgba(100, 148, 218, 0.12)';
+      ctx.strokeStyle = alt % 30 === 0 ? gridMajorColor : gridMinorColor;
       ctx.beginPath();
       ctx.moveTo(padLeft, y);
       ctx.lineTo(padLeft + plotW, y);
@@ -292,10 +308,12 @@ export class SkyScreenView {
       const x = padLeft + ((dAz + 90) / 180) * plotW;
       const isCenter = dAz === 0;
       ctx.strokeStyle = isCenter
-        ? 'rgba(56, 189, 248, 0.45)'
+        ? isDaytimeBeforeSunset
+          ? 'rgba(254, 240, 138, 0.65)'
+          : 'rgba(56, 189, 248, 0.45)'
         : dAz % 30 === 0
-        ? 'rgba(100, 148, 218, 0.28)'
-        : 'rgba(100, 148, 218, 0.12)';
+        ? gridMajorColor
+        : gridMinorColor;
       ctx.beginPath();
       ctx.moveTo(x, padTop);
       ctx.lineTo(x, padTop + plotH);
@@ -673,13 +691,16 @@ export class SkyScreenView {
       ctx.fillText(text, x, padTop + plotH + 10);
     }
 
-    // 頂部天頂中央提示
-    ctx.fillStyle = '#93c5fd';
+    // 頂部天頂中央提示（標示日落前白晝天幕或日落後夜幕星空）
+    const skyStatusText = isDaytimeBeforeSunset
+      ? `☀ 日落前・白晝晴空 (太陽仰角 +${sunAlt.toFixed(1)}°)`
+      : `🌙 日落後・夜幕星空 (太陽仰角 ${sunAlt.toFixed(1)}°)`;
+    ctx.fillStyle = isDaytimeBeforeSunset ? '#fde68a' : '#93c5fd';
     ctx.font = '700 14px "Songti TC", "STSong", "PMingLiU", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(
-      `✦ ${cfg.nameZh} (${cfg.nameEn}) — 游標移至星體或軌跡線可檢視解說`,
+      `✦ ${cfg.nameZh} (${cfg.nameEn}) ｜ ${skyStatusText} — 游標移至星體或軌跡線可檢視解說`,
       padLeft + plotW / 2,
       padTop - 8
     );
