@@ -7,8 +7,10 @@ import {
   OBLIQUITY_RAD,
   formatRA
 } from '../utils/astronomy.js';
+import { createEarthTextures } from '../utils/earthTexture.js';
 
 const GLOBE_RADIUS = 100;
+const EARTH_RADIUS = 7.2;
 
 export class CelestialGlobeModel {
   constructor(onSelectObject) {
@@ -46,28 +48,56 @@ export class CelestialGlobeModel {
   _buildEarthCenter() {
     const earthGroup = new THREE.Group();
 
-    // 中心地球球體
-    const geo = new THREE.SphereGeometry(5.5, 48, 32);
+    // 太陽對中心地球的真實方向照射光（呈現地球晝夜半球與陸地山脈陰影）
+    this.earthSunLight = new THREE.DirectionalLight(0xfffbeb, 2.2);
+    this.group.add(this.earthSunLight);
+
+    // 中心藍色地球（含海洋、各大洲陸地、台灣島與地形凹凸貼圖）
+    const { colorMap, bumpMap } = createEarthTextures();
+    const geo = new THREE.SphereGeometry(EARTH_RADIUS, 64, 48);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0x1d4ed8,
-      emissive: 0x0a192f,
+      map: colorMap,
+      bumpMap: bumpMap,
+      bumpScale: 0.25,
       roughness: 0.55,
-      metalness: 0.1
+      metalness: 0.08,
+      emissive: 0x0b1d3a,
+      emissiveMap: colorMap,
+      emissiveIntensity: 0.32
     });
     this.earthMesh = new THREE.Mesh(geo, mat);
     this.earthMesh.userData = {
       type: 'Body',
       title: '🌍 地球 (Earth - 天球中心)',
       subtitle: 'Geocentric Celestial Center',
-      details: '在天球儀 (Level 1) 尺度下，地球位於天球正中央，假想所有恆星與黃道十二宮投影於外層天球表面上。'
+      details: '地球位於天球正中央，自轉姿態與格林威治恆星時 (GST)、太陽照射方向及觀測者經緯度完全同步。'
     };
     this.pickables.push(this.earthMesh);
     earthGroup.add(this.earthMesh);
 
-    // 地球經緯網線裝飾
-    const wireGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(5.56, 16, 12));
-    const wireMat = new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.35 });
-    this.earthMesh.add(new THREE.LineSegments(wireGeo, wireMat));
+    // 地球淡藍色大氣層光暈外殼
+    const atmoGeo = new THREE.SphereGeometry(EARTH_RADIUS * 1.035, 48, 32);
+    const atmoMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.14,
+      side: THREE.BackSide,
+      depthWrite: false
+    });
+    this.earthMesh.add(new THREE.Mesh(atmoGeo, atmoMat));
+
+    // 地球赤道線與格林威治本初子午線微光標記
+    const eqPts = [];
+    for (let a = 0; a <= 360; a += 4) {
+      const r = THREE.MathUtils.degToRad(a);
+      eqPts.push(new THREE.Vector3(Math.cos(r) * (EARTH_RADIUS + 0.04), 0, Math.sin(r) * (EARTH_RADIUS + 0.04)));
+    }
+    this.earthMesh.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(eqPts),
+        new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 })
+      )
+    );
 
     // 地軸 (連接北天極與南天極)
     const axisPts = [new THREE.Vector3(0, -GLOBE_RADIUS, 0), new THREE.Vector3(0, GLOBE_RADIUS, 0)];
@@ -83,8 +113,8 @@ export class CelestialGlobeModel {
     axisLine.computeLineDistances();
     earthGroup.add(axisLine);
 
-    // 觀測者地表釘選點
-    const pinGeo = new THREE.SphereGeometry(0.42, 16, 16);
+    // 觀測者地表釘選點與法線立標 (隨輸入經緯度精準定位於地球陸地表面)
+    const pinGeo = new THREE.SphereGeometry(0.38, 16, 16);
     const pinMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
     this.observerPin = new THREE.Mesh(pinGeo, pinMat);
     this.earthMesh.add(this.observerPin);
@@ -344,7 +374,7 @@ export class CelestialGlobeModel {
 
   _buildObserverHorizon() {
     // 觀測者地平面切面圓盤 (隨經緯度與恆星時旋轉法向量指向當地天頂 Zenith)
-    const ringGeo = new THREE.RingGeometry(6.2, GLOBE_RADIUS * 0.98, 64);
+    const ringGeo = new THREE.RingGeometry(EARTH_RADIUS + 0.8, GLOBE_RADIUS * 0.98, 64);
     ringGeo.rotateX(-Math.PI / 2);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x10b981,
@@ -448,28 +478,40 @@ export class CelestialGlobeModel {
   }
 
   update(ephemeris) {
-    // 1. 根據格林威治恆星時旋轉中心地球，並標出觀測者經緯度位置
+    // 1. 根據格林威治恆星時 (GST) 旋轉中心地球：
+    // 在 Three.js SphereGeometry 中，經度 0° (格林威治) 位於 +X 軸，東經 +90°E 位於 -Z 軸。
+    // 當地球繞 +Y 軸正向旋轉 gstRad 時，格林威治子午線指向赤經 RA = GST，
+    // 而地球表面上任意經度 lon、緯度 lat 的地點（例如台灣/布柳之家 121°E, 24.8°N），
+    // 其世界座標法向量恰好指向赤經 RA = GST + lon = LST（地方恆星時）、赤緯 Dec = lat（當地天頂 Zenith）！
     const gstRad = THREE.MathUtils.degToRad(ephemeris.gstHours * 15);
     this.earthMesh.rotation.y = gstRad;
 
     const latRad = THREE.MathUtils.degToRad(ephemeris.lat);
     const lonRad = THREE.MathUtils.degToRad(ephemeris.lon);
-    const rPin = 5.65;
+    const rPin = EARTH_RADIUS + 0.12;
     this.observerPin.position.set(
       rPin * Math.cos(latRad) * Math.cos(lonRad),
       rPin * Math.sin(latRad),
       -rPin * Math.cos(latRad) * Math.sin(lonRad)
     );
 
+    this.earthMesh.userData = {
+      type: 'Body',
+      title: '🌍 地球 (Earth - 天球中心)',
+      subtitle: `觀測點 (${ephemeris.lat.toFixed(2)}°N, ${ephemeris.lon.toFixed(2)}°E) | 地方恆星時 ${formatRA(ephemeris.lstHours)}`,
+      details: `格林威治恆星時 GST: ${formatRA(ephemeris.gstHours)}\n地球自轉姿態與日照晝夜半球完全依據目前輸入的日期時間與經緯度即時計算。`
+    };
+
     // 2. 更新觀測者地平面切面方向 (當地天頂 Zenith 的赤經 = LST, 赤緯 = Lat)
     const zenithVec = raDecToVector3(ephemeris.lstHours, ephemeris.lat, 1).normalize();
     const upDefault = new THREE.Vector3(0, 1, 0);
     this.horizonGroup.quaternion.setFromUnitVectors(upDefault, zenithVec);
 
-    // 3. 更新太陽在天球與黃道上的位置
+    // 3. 更新太陽在天球與黃道上的位置，並同步地球日照光源方向（真實呈現地球向陽面白晝與背陽面黑夜）
     const sunPos = raDecToVector3(ephemeris.sun.ra, ephemeris.sun.dec, GLOBE_RADIUS * 0.99);
     this.sunMesh.position.copy(sunPos);
     this.sunLabel.position.copy(sunPos.clone().multiplyScalar(1.04));
+    this.earthSunLight.position.copy(sunPos);
     this.sunMesh.userData = {
       type: 'Body',
       title: '☀ 太陽 (Sun)',
