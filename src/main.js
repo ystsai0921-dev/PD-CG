@@ -25,6 +25,8 @@ const els = {
   inputLon: document.getElementById('input-lon'),
   inputDate: document.getElementById('input-date'),
   inputTime: document.getElementById('input-time'),
+  sliderDayTime: document.getElementById('slider-day-time'),
+  sliderTimeLabel: document.getElementById('slider-time-label'),
   btnNow: document.getElementById('btn-now'),
   btnPlay: document.getElementById('btn-play'),
   selectSpeed: document.getElementById('select-speed'),
@@ -77,7 +79,7 @@ function initZodiacQuickbar() {
   });
 }
 
-// 同步 Date 物件至 HTML date / time 輸入框
+// 同步 Date 物件至 HTML date / time 輸入框與當日時間滑桿
 function syncDateInputsFromState() {
   const d = state.date;
   const yyyy = d.getFullYear();
@@ -88,6 +90,10 @@ function syncDateInputsFromState() {
 
   els.inputDate.value = `${yyyy}-${mm}-${dd}`;
   els.inputTime.value = `${hh}:${min}`;
+
+  const totalMinutes = d.getHours() * 60 + d.getMinutes();
+  els.sliderDayTime.value = totalMinutes;
+  els.sliderTimeLabel.textContent = `${hh}:${min}`;
 }
 
 // 從 HTML date / time 輸入框讀取時間
@@ -96,6 +102,7 @@ function readDateInputsToState() {
   const [yyyy, mm, dd] = els.inputDate.value.split('-').map(Number);
   const [hh, min] = els.inputTime.value.split(':').map(Number);
   state.date = new Date(yyyy, mm - 1, dd, hh, min, 0);
+  syncDateInputsFromState();
   refreshAstronomy();
 }
 
@@ -193,6 +200,16 @@ function bindUIEvents() {
   // 日期與時間事件
   els.inputDate.addEventListener('change', readDateInputsToState);
   els.inputTime.addEventListener('change', readDateInputsToState);
+
+  // 當日時間滑桿即時拖曳 (0 ~ 1439 分鐘)
+  els.sliderDayTime.addEventListener('input', (e) => {
+    const totalMins = parseInt(e.target.value, 10) || 0;
+    const hh = Math.floor(totalMins / 60);
+    const min = totalMins % 60;
+    state.date.setHours(hh, min, 0, 0);
+    syncDateInputsFromState();
+    refreshAstronomy();
+  });
 
   els.btnNow.addEventListener('click', () => {
     state.date = new Date();

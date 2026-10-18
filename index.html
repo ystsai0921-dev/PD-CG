@@ -92,6 +92,20 @@
               <input type="time" id="input-time" step="60" />
             </div>
           </div>
+          <div class="time-slider-wrap">
+            <div class="slider-header">
+              <span class="field-caption">當日時間滑桿 (00:00 ~ 23:59)</span>
+              <span id="slider-time-label" class="slider-time-badge">12:00</span>
+            </div>
+            <input type="range" id="slider-day-time" class="day-time-slider" min="0" max="1439" step="1" value="720" />
+            <div class="slider-ticks">
+              <span>00:00</span>
+              <span>06:00</span>
+              <span>12:00</span>
+              <span>18:00</span>
+              <span>24:00</span>
+            </div>
+          </div>
           <div class="time-playback">
             <button id="btn-play" class="play-btn" title="播放/暫停時間演化">▶ 播放</button>
             <select id="select-speed" class="input-select speed-select" title="時間推進倍率">
