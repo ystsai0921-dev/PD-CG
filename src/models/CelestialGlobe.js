@@ -162,14 +162,15 @@ export class CelestialGlobeModel {
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    const mat = new THREE.PointsMaterial({
+    this.baseStarfieldOpacity = 0.65;
+    this.starfieldMat = new THREE.PointsMaterial({
       size: 1.15,
       vertexColors: true,
       transparent: true,
-      opacity: 0.65
+      opacity: this.baseStarfieldOpacity
     });
 
-    this.group.add(new THREE.Points(geo, mat));
+    this.group.add(new THREE.Points(geo, this.starfieldMat));
   }
 
   _buildEquatorialGrid() {
@@ -330,7 +331,9 @@ export class CelestialGlobeModel {
       const baseColorHex = isZodiac ? 0xfef08a : 0xbae6fd;
       const starGeo = new THREE.SphereGeometry(radius, 14, 14);
       const starMat = new THREE.MeshBasicMaterial({
-        color: baseColorHex
+        color: baseColorHex,
+        transparent: true,
+        opacity: 1.0
       });
       const starMesh = new THREE.Mesh(starGeo, starMat);
       starMesh.position.copy(pos);
@@ -472,17 +475,22 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 清除目前天球上所有星座或行星的閃爍高亮狀態與各別恆星標籤 (例如按 Esc 退出時呼叫)
+   * 清除目前天球上所有星座或行星的閃爍高亮狀態、恢復所有星星 100% 原始亮度，並隱藏各別恆星標籤 (例如按 Esc 退出時呼叫)
    */
   clearHighlight() {
+    if (this.starfieldMat) {
+      this.starfieldMat.opacity = this.baseStarfieldOpacity;
+    }
+
     Object.values(this.constellationMap).forEach((entry) => {
-      entry.labelObj.element.classList.remove('active-blink-label');
+      entry.labelObj.element.classList.remove('active-blink-label', 'muted-constellation-label');
       entry.labelObj.element.innerHTML = entry.conciseLabelHtml;
       entry.lineMat.color.setHex(entry.baseLineColorHex);
       entry.lineMat.opacity = entry.baseLineOpacity;
       entry.starEntries.forEach((s) => {
         s.mesh.scale.setScalar(1);
         s.mesh.material.color.setHex(s.baseColorHex);
+        s.mesh.material.opacity = 1.0;
         s.haloMesh.visible = false;
         s.haloMesh.material.opacity = 0;
         s.detailLabel.visible = false;
@@ -507,21 +515,47 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 點選星座名字（或黃道十二宮導覽鈕）：使該星座所有恆星與連線閃爍高亮，並在天球上與左下詳情欄顯現各顆星的名字與星等
+   * 將非當前選中星座的其他所有恆星、星座連線與背景星場 Muted 50%，藉此強烈凸顯所選星座
+   */
+  _muteOtherStars(selectedConstellationId) {
+    if (this.starfieldMat) {
+      this.starfieldMat.opacity = this.baseStarfieldOpacity * 0.5;
+    }
+
+    Object.values(this.constellationMap).forEach((entry) => {
+      if (entry.c.id !== selectedConstellationId) {
+        entry.labelObj.element.classList.add('muted-constellation-label');
+        entry.lineMat.opacity = entry.baseLineOpacity * 0.5;
+        entry.lineMat.color.copy(entry.baseLineColorObj).multiplyScalar(0.5);
+        entry.starEntries.forEach((s) => {
+          s.mesh.material.opacity = 0.5;
+          s.mesh.material.color.copy(s.baseColorObj).multiplyScalar(0.5);
+        });
+      }
+    });
+  }
+
+  /**
+   * 點選星座名字（或黃道十二宮導覽鈕）：使該星群閃爍三下後維持高亮，其他星星 muted 50%，並顯現各顆星的名字與星等
    */
   selectConstellation(constellationId) {
     this.clearHighlight();
     const entry = this.constellationMap[constellationId];
     if (!entry) return;
 
+    this._muteOtherStars(constellationId);
+
     this.activeHighlight = {
       type: 'Constellation',
-      constellationId
+      constellationId,
+      startTime: performance.now() * 0.001
     };
 
     entry.labelObj.element.innerHTML = entry.expandedLabelHtml;
+    void entry.labelObj.element.offsetWidth;
     entry.labelObj.element.classList.add('active-blink-label');
     entry.starEntries.forEach((s) => {
+      s.mesh.material.opacity = 1.0;
       s.haloMesh.visible = true;
       s.detailLabel.visible = true;
       s.detailLabel.element.style.display = '';
@@ -533,7 +567,7 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 點選單顆恆星：同時讓所屬星座的所有恆星與名字/星等標籤顯現並閃爍高亮
+   * 點選單顆恆星：同時讓所屬星座閃爍三下後維持高亮、其他星星 muted 50%，並顯現各顆星名字/星等標籤
    */
   selectStar(starUserData) {
     if (!starUserData) return;
@@ -541,14 +575,19 @@ export class CelestialGlobeModel {
 
     const entry = this.constellationMap[starUserData.constellationId];
     if (entry) {
+      this._muteOtherStars(starUserData.constellationId);
+
       this.activeHighlight = {
         type: 'Constellation',
         constellationId: starUserData.constellationId,
-        focusStarName: starUserData.starName
+        focusStarName: starUserData.starName,
+        startTime: performance.now() * 0.001
       };
       entry.labelObj.element.innerHTML = entry.expandedLabelHtml;
+      void entry.labelObj.element.offsetWidth;
       entry.labelObj.element.classList.add('active-blink-label');
       entry.starEntries.forEach((s) => {
+        s.mesh.material.opacity = 1.0;
         s.haloMesh.visible = true;
         s.detailLabel.visible = true;
         s.detailLabel.element.style.display = '';
@@ -561,7 +600,7 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 點選行星（或太陽、月球）的名字或球體：使該星體與標籤閃爍高亮並顯示詳細資訊
+   * 點選行星（或太陽、月球）的名字或球體：使該星體與標籤閃爍三下後維持高亮並顯示詳細資訊
    */
   selectDynamicBody(bodyId) {
     this.clearHighlight();
@@ -570,11 +609,13 @@ export class CelestialGlobeModel {
 
     this.activeHighlight = {
       type: 'Body',
-      bodyId
+      bodyId,
+      startTime: performance.now() * 0.001
     };
 
     if (bEntry.labelObj && bEntry.labelObj.element) {
       if (bEntry.expandedHtml) bEntry.labelObj.element.innerHTML = bEntry.expandedHtml;
+      void bEntry.labelObj.element.offsetWidth;
       bEntry.labelObj.element.classList.add('active-blink-label');
     }
     if (bEntry.haloMesh) {
@@ -755,9 +796,16 @@ export class CelestialGlobeModel {
     }
     this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
 
-    // 若有選中的星座或行星，執行週期性閃爍高亮動畫
+    // 若有選中的星座或行星，執行閃爍三下後維持高亮的動畫
     if (this.activeHighlight) {
-      const pulse = 0.5 + 0.5 * Math.sin(timeSec * 7.5);
+      const elapsed = Math.max(0, timeSec - (this.activeHighlight.startTime || 0));
+      const totalBlinkDuration = 1.65;
+      // 經歷 3 次亮起峰值 (1π, 3π, 5π) 後，於第 3 下峰值停住並維持 pulse = 1.0 恆定高亮
+      const pulse =
+        elapsed < totalBlinkDuration
+          ? 0.5 - 0.5 * Math.cos((elapsed / totalBlinkDuration) * Math.PI * 5)
+          : 1.0;
+
       if (this.activeHighlight.type === 'Constellation') {
         const entry = this.constellationMap[this.activeHighlight.constellationId];
         if (entry) {
@@ -766,21 +814,21 @@ export class CelestialGlobeModel {
           entry.starEntries.forEach((s) => {
             const isFocus =
               this.activeHighlight.focusStarName && s.star.name === this.activeHighlight.focusStarName;
-            const scaleAmp = isFocus ? 1.35 + pulse * 1.25 : 1.15 + pulse * 0.95;
+            const scaleAmp = isFocus ? 1.25 + pulse * 0.95 : 1.1 + pulse * 0.65;
             s.mesh.scale.setScalar(scaleAmp);
             s.mesh.material.color.lerpColors(s.baseColorObj, this.flashWhiteColor, pulse * 0.85);
-            s.haloMesh.scale.setScalar(0.95 + pulse * 0.75);
-            s.haloMesh.material.opacity = 0.22 + pulse * 0.58;
+            s.haloMesh.scale.setScalar(0.9 + pulse * 0.6);
+            s.haloMesh.material.opacity = 0.18 + pulse * 0.52;
           });
         }
       } else if (this.activeHighlight.type === 'Body') {
         const bEntry = this.dynamicBodyMap[this.activeHighlight.bodyId];
         if (bEntry) {
-          bEntry.mesh.scale.setScalar(1.15 + pulse * 0.95);
+          bEntry.mesh.scale.setScalar(1.1 + pulse * 0.65);
           bEntry.mesh.material.color.lerpColors(bEntry.baseColorObj, this.flashWhiteColor, pulse * 0.8);
           if (bEntry.haloMesh) {
-            bEntry.haloMesh.scale.setScalar(0.95 + pulse * 0.85);
-            bEntry.haloMesh.material.opacity = 0.25 + pulse * 0.6;
+            bEntry.haloMesh.scale.setScalar(0.9 + pulse * 0.65);
+            bEntry.haloMesh.material.opacity = 0.2 + pulse * 0.55;
           }
         }
       }
