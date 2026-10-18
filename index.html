@@ -124,7 +124,24 @@
         <div class="control-group" id="scale-specific-controls">
           <!-- Level 1 專用選項 -->
           <div id="controls-celestial" class="sub-controls">
-            <label class="group-label">天球圖層 (Celestial Layers)</label>
+            <!-- L1 天幕投影功能 (位於播放下方) -->
+            <div class="sky-proj-box">
+              <label class="group-label">天幕投影 (Planar Sky Screen)</label>
+              <div class="sky-proj-row">
+                <select id="select-sky-dir" class="input-select">
+                  <option value="E">東 East (方位 90°)</option>
+                  <option value="S" selected>南 South (方位 180°)</option>
+                  <option value="W">西 West (方位 270°)</option>
+                  <option value="N">北 North (方位 0°)</option>
+                </select>
+                <button id="btn-exec-sky" class="play-btn" title="執行平面天幕投影 (仰角0°~90°, 左右橫跨180°)">執行投影</button>
+              </div>
+              <button id="btn-exit-sky-side" class="mode-btn secondary hidden" style="width:100%; margin-top:5px;">
+                ↩ 返回天球儀 (Return to Globe)
+              </button>
+            </div>
+
+            <label class="group-label" style="margin-top:8px; display:block;">天球圖層 (Celestial Layers)</label>
             <div class="checkbox-grid">
               <label class="check-label"><input type="checkbox" id="chk-zodiac" checked /> 黃道十二宮星座連線</label>
               <label class="check-label"><input type="checkbox" id="chk-ecliptic" checked /> 黃道圈與宮位刻度</label>
@@ -222,6 +239,16 @@
     <!-- 右側整個視窗：3D 顯示視窗 (約 80%) -->
     <main id="viewport">
       <div id="canvas-container"></div>
+
+      <!-- L1 平面天幕投影視窗 (下由地平線 0° 起、上至頭頂 90°、左右橫跨 180°) -->
+      <div id="sky-screen-overlay" class="hidden">
+        <canvas id="sky-screen-canvas"></canvas>
+        <div class="sky-screen-topbar">
+          <button id="btn-exit-sky-main" class="return-globe-btn" title="結束平面天幕投影，返回 3D 天球儀">
+            ↩ 返回天球儀 (Return to Celestial Globe)
+          </button>
+        </div>
+      </div>
 
       <!-- 頂部浮動操作列：預留給無中鍵滑鼠使用的左鍵 Orbit / Pan 切換鈕 + Esc 提示 -->
       <div id="interaction-toolbar">

@@ -1,10 +1,13 @@
 import { SceneManager } from './core/SceneManager.js';
+import { SkyScreenView } from './models/SkyScreenView.js';
 import { computeEphemeris, formatRA } from './utils/astronomy.js';
 import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js';
 
 // 應用程式全域狀態
 const state = {
   scale: 'celestial', // 'celestial' | 'solar' | 'horizon'
+  skyScreenActive: false,
+  skyDirection: 'S',
   lat: 24.8136,
   lon: 121.0322,
   date: new Date(),
@@ -16,6 +19,13 @@ const state = {
 // DOM 元素快取
 const els = {
   canvasContainer: document.getElementById('canvas-container'),
+  skyScreenOverlay: document.getElementById('sky-screen-overlay'),
+  skyScreenCanvas: document.getElementById('sky-screen-canvas'),
+  selectSkyDir: document.getElementById('select-sky-dir'),
+  btnExecSky: document.getElementById('btn-exec-sky'),
+  btnExitSkyMain: document.getElementById('btn-exit-sky-main'),
+  btnExitSkySide: document.getElementById('btn-exit-sky-side'),
+  interactionToolbar: document.getElementById('interaction-toolbar'),
   scaleBtns: document.querySelectorAll('.scale-btn'),
   controlsCelestial: document.getElementById('controls-celestial'),
   controlsSolar: document.getElementById('controls-solar'),
@@ -52,7 +62,7 @@ const els = {
   zodiacPills: document.getElementById('zodiac-pills')
 };
 
-// 初始化 3D 場景管理器
+// 初始化 3D 場景管理器与 L1 平面天幕投影器
 const sceneManager = new SceneManager(els.canvasContainer, {
   onControlModeChange: (mode) => updateControlModeUI(mode),
   onSelectObject: (info) => renderSelectionInfo(info),
@@ -60,6 +70,26 @@ const sceneManager = new SceneManager(els.canvasContainer, {
     els.selectSolarTarget.value = bodyId;
   }
 });
+
+const skyScreenView = new SkyScreenView(els.skyScreenCanvas, (info) => renderSelectionInfo(info));
+
+// 啟動或關閉 L1 平面天幕投影模式
+function setSkyScreenMode(active) {
+  state.skyScreenActive = active;
+  skyScreenView.setDirection(els.selectSkyDir.value);
+  skyScreenView.setActive(active);
+
+  els.skyScreenOverlay.classList.toggle('hidden', !active);
+  els.btnExitSkySide.classList.toggle('hidden', !active);
+  els.interactionToolbar.classList.toggle('hidden', active);
+
+  if (active) {
+    els.infoScaleBadge.textContent = `L1 天幕投影 (${els.selectSkyDir.options[els.selectSkyDir.selectedIndex].text.split(' ')[0]})`;
+    refreshAstronomy();
+  } else {
+    els.infoScaleBadge.textContent = 'L1 天球儀';
+  }
+}
 
 // 建立底部黃道十二宮快速導覽按鈕
 function initZodiacQuickbar() {
@@ -71,6 +101,9 @@ function initZodiacQuickbar() {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.zodiac-pill').forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
+      if (state.skyScreenActive) {
+        setSkyScreenMode(false);
+      }
       if (state.scale !== 'celestial') {
         switchScale('celestial');
       }
@@ -144,6 +177,9 @@ function readDateInputsToState() {
 
 // 切換三大觀測尺度 (L1 天球儀 / L2 太陽系 / L3 地平日月)
 function switchScale(scaleName) {
+  if (state.skyScreenActive) {
+    setSkyScreenMode(false);
+  }
   state.scale = scaleName;
   els.scaleBtns.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.scale === scaleName);
@@ -190,10 +226,11 @@ function renderSelectionInfo(info) {
   `;
 }
 
-// 計算天文曆表並更新 3D 模型與左下資訊欄
+// 計算天文曆表並更新 3D 模型、平面天幕與左下資訊欄
 function refreshAstronomy() {
   const eph = computeEphemeris(state.date, state.lat, state.lon);
   sceneManager.updateEphemeris(eph);
+  skyScreenView.update(eph);
 
   // 更新左下資訊欄數值
   const z = eph.sun.zodiac;
@@ -262,6 +299,22 @@ function bindUIEvents() {
 
   els.selectSpeed.addEventListener('change', (e) => {
     state.speedMultiplier = Number(e.target.value);
+  });
+
+  // L1 天幕投影執行與返回天球儀事件
+  els.btnExecSky.addEventListener('click', () => {
+    setSkyScreenMode(true);
+  });
+  els.selectSkyDir.addEventListener('change', () => {
+    if (state.skyScreenActive) {
+      setSkyScreenMode(true);
+    }
+  });
+  els.btnExitSkyMain.addEventListener('click', () => {
+    setSkyScreenMode(false);
+  });
+  els.btnExitSkySide.addEventListener('click', () => {
+    setSkyScreenMode(false);
   });
 
   // L1 天球儀圖層開關
