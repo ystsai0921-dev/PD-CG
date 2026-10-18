@@ -417,6 +417,32 @@ input:focus {
   color: #cbd5e1;
 }
 
+.version-footer {
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.version-tag {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fde68a;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.version-repo {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
 /* 右側整個視窗：3D 顯示視窗 (約 80%) */
 #viewport {
   flex: 1;
