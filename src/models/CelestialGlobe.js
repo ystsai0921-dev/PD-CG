@@ -434,33 +434,44 @@ export class CelestialGlobeModel {
     });
     this.horizonGroup.add(new THREE.Line(borderGeo, borderMat));
 
-    // 天頂向量箭頭軸線 (Zenith Normal Axis，垂直於地平面切面)
-    const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, GLOBE_RADIUS * 1.03, 0)];
+    // 天頂向量箭頭軸線 (Zenith Normal Axis，垂直於地平面切面並穿出天球外)
+    const zenithOuterY = GLOBE_RADIUS * 1.15;
+    const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, zenithOuterY, 0)];
     const zenithGeo = new THREE.BufferGeometry().setFromPoints(zenithPts);
     const zenithMat = new THREE.LineDashedMaterial({
       color: 0x34d399,
       dashSize: 2,
       gapSize: 1.5,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.88
     });
     const zenithLine = new THREE.Line(zenithGeo, zenithMat);
     zenithLine.computeLineDistances();
     this.horizonGroup.add(zenithLine);
 
-    // 4. 天頂 3D 旋轉軸頂錐與環形旋轉指標 (可點擊對著垂直地平面切面的天頂軸作 90° 旋轉)
-    const zenithCapGroup = new THREE.Group();
-    zenithCapGroup.position.set(0, GLOBE_RADIUS * 1.01, 0);
+    // 穿出天球頂端至球外箭頭處的實心軸桿段 (y = GLOBE_RADIUS ~ zenithOuterY)
+    const outerShaftLen = zenithOuterY - GLOBE_RADIUS;
+    const outerShaftGeo = new THREE.CylinderGeometry(0.22, 0.22, outerShaftLen, 12);
+    const outerShaftMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
+    const outerShaftMesh = new THREE.Mesh(outerShaftGeo, outerShaftMat);
+    outerShaftMesh.position.set(0, GLOBE_RADIUS + outerShaftLen / 2, 0);
+    outerShaftMesh.userData = { isZenithRotator: true };
+    this.pickables.push(outerShaftMesh);
+    this.horizonGroup.add(outerShaftMesh);
 
-    const coneGeo = new THREE.ConeGeometry(1.4, 3.2, 18);
+    // 4. 天頂球外 3D 旋轉軸頂錐與黃色環形旋轉指標 (移至天球外側 y = GLOBE_RADIUS * 1.15)
+    const zenithCapGroup = new THREE.Group();
+    zenithCapGroup.position.set(0, zenithOuterY, 0);
+
+    const coneGeo = new THREE.ConeGeometry(1.6, 3.8, 18);
     const coneMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
     const coneMesh = new THREE.Mesh(coneGeo, coneMat);
-    coneMesh.position.set(0, 1.2, 0);
+    coneMesh.position.set(0, 1.5, 0);
     coneMesh.userData = { isZenithRotator: true };
     this.pickables.push(coneMesh);
     zenithCapGroup.add(coneMesh);
 
-    const torusGeo = new THREE.TorusGeometry(3.2, 0.32, 12, 32, Math.PI * 1.65);
+    const torusGeo = new THREE.TorusGeometry(3.6, 0.36, 12, 32, Math.PI * 1.65);
     torusGeo.rotateX(Math.PI / 2);
     const torusMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
     this.zenithRingMesh = new THREE.Mesh(torusGeo, torusMat);
@@ -470,7 +481,7 @@ export class CelestialGlobeModel {
 
     this.horizonGroup.add(zenithCapGroup);
 
-    // 5. 天頂互動式「🔄 旋轉 90°」符號按鈕 (CSS2DObject)
+    // 5. 天頂互動式「🔄 旋轉 90°」符號按鈕 (位於球外箭頭更外側 y = GLOBE_RADIUS * 1.23)
     const rotBtnDiv = document.createElement('div');
     rotBtnDiv.className = 'zenith-rotate-btn';
     rotBtnDiv.title = '點擊使天球繞垂直地平面切面的天頂軸旋轉 90°';
@@ -481,7 +492,7 @@ export class CelestialGlobeModel {
     });
     this.zenithRotateBtnDiv = rotBtnDiv;
     this.zenithRotateLabel = new CSS2DObject(rotBtnDiv);
-    this.zenithRotateLabel.position.set(0, GLOBE_RADIUS + 8.5, 0);
+    this.zenithRotateLabel.position.set(0, GLOBE_RADIUS * 1.23, 0);
     this.horizonGroup.add(this.zenithRotateLabel);
     this.labels.push(this.zenithRotateLabel);
   }
