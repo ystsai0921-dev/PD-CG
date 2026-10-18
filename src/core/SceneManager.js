@@ -77,6 +77,13 @@ export class SceneManager {
   _bindEvents() {
     window.addEventListener('resize', () => this._onResize());
 
+    // 按 Esc 鍵：除了退出左鍵輔助模式外，亦退出 L1 星座/行星閃爍高亮與詳細資訊狀態
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.clearSelectionHighlight();
+      }
+    });
+
     // 左鍵點擊選取星體或星座 (僅在未開啟左鍵輔助拖曳或未發生拖曳時觸發)
     this.renderer.domElement.addEventListener('pointerup', (e) => {
       if (e.button !== 0 || this.controls.hasDragged || this.controls.leftClickMode !== 'none') {
@@ -84,6 +91,15 @@ export class SceneManager {
       }
       this._pickObject(e);
     });
+  }
+
+  clearSelectionHighlight() {
+    if (this.celestialModel) {
+      this.celestialModel.clearHighlight();
+    }
+    if (this.callbacks.onClearSelection) {
+      this.callbacks.onClearSelection();
+    }
   }
 
   _onResize() {
@@ -165,11 +181,13 @@ export class SceneManager {
         this.celestialModel.constellationMap[this.celestialModel.activeHighlight.constellationId];
       if (cEntry) {
         cEntry.starEntries.forEach((s) => {
+          s.detailLabel.visible = true;
           s.detailLabel.element.style.display = '';
         });
       }
     }
     if (isCelestial && this.celestialModel.zenithRotateLabel) {
+      this.celestialModel.zenithRotateLabel.visible = this.celestialModel.horizonGroup.visible;
       this.celestialModel.zenithRotateLabel.element.style.display =
         this.celestialModel.horizonGroup.visible ? '' : 'none';
     }
@@ -181,6 +199,7 @@ export class SceneManager {
 
   _setLabelsVisible(labelList, visible) {
     labelList.forEach((lbl) => {
+      lbl.visible = visible;
       lbl.element.style.display = visible ? '' : 'none';
     });
   }

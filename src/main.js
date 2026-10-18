@@ -67,6 +67,11 @@ const els = {
 const sceneManager = new SceneManager(els.canvasContainer, {
   onControlModeChange: (mode) => updateControlModeUI(mode),
   onSelectObject: (info) => renderSelectionInfo(info),
+  onClearSelection: () => {
+    document.querySelectorAll('.zodiac-pill').forEach((p) => p.classList.remove('active'));
+    els.selectionDetails.innerHTML =
+      '尚未選取特定天體。左鍵點擊畫面中的星座名、恆星或行星即可閃爍高亮並檢視詳細資訊（按 <b>Esc</b> 退出高亮狀態）。';
+  },
   onSolarTargetChange: (bodyId) => {
     els.selectSolarTarget.value = bodyId;
   }
