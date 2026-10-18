@@ -235,6 +235,13 @@ input:focus {
   color: var(--text-muted);
 }
 
+.lunar-note {
+  font-size: 11px;
+  color: #fde68a;
+  margin-top: 2px;
+  letter-spacing: 0.2px;
+}
+
 .mini-btn {
   padding: 2px 7px;
   font-size: 11px;

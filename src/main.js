@@ -25,6 +25,7 @@ const els = {
   inputLon: document.getElementById('input-lon'),
   inputDate: document.getElementById('input-date'),
   inputTime: document.getElementById('input-time'),
+  lunarDateNote: document.getElementById('lunar-date-note'),
   sliderDayTime: document.getElementById('slider-day-time'),
   sliderTimeLabel: document.getElementById('slider-time-label'),
   btnNow: document.getElementById('btn-now'),
@@ -79,7 +80,39 @@ function initZodiacQuickbar() {
   });
 }
 
-// 同步 Date 物件至 HTML date / time 輸入框與當日時間滑桿
+// 將公曆 Date 轉為繁體中文農曆字串（例如：農曆丙午年 九月初八）
+const LUNAR_DAYS = [
+  '', '初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+  '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+  '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'
+];
+
+function formatLunarDate(date) {
+  try {
+    const fmt = new Intl.DateTimeFormat('zh-Hant-TW-u-ca-chinese', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const parts = fmt.formatToParts(date);
+    let yearName = '';
+    let monthName = '';
+    let dayNum = 0;
+
+    for (const p of parts) {
+      if (p.type === 'yearName' || p.type === 'year') yearName = p.value;
+      if (p.type === 'month') monthName = p.value;
+      if (p.type === 'day') dayNum = parseInt(p.value, 10);
+    }
+
+    const dayStr = LUNAR_DAYS[dayNum] || `${dayNum}日`;
+    return `農曆 ${yearName}年 ${monthName}${dayStr}`;
+  } catch {
+    return '農曆 --';
+  }
+}
+
+// 同步 Date 物件至 HTML date / time 輸入框、農曆附註與當日時間滑桿
 function syncDateInputsFromState() {
   const d = state.date;
   const yyyy = d.getFullYear();
@@ -90,6 +123,9 @@ function syncDateInputsFromState() {
 
   els.inputDate.value = `${yyyy}-${mm}-${dd}`;
   els.inputTime.value = `${hh}:${min}`;
+  if (els.lunarDateNote) {
+    els.lunarDateNote.textContent = formatLunarDate(d);
+  }
 
   const totalMinutes = d.getHours() * 60 + d.getMinutes();
   els.sliderDayTime.value = totalMinutes;
