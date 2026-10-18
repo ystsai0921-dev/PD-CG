@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import * as Astronomy from 'astronomy-engine';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { altAzToHorizonVector3 } from '../utils/astronomy.js';
+import { altAzToHorizonVector3, raDecToVector3 } from '../utils/astronomy.js';
+import { createMoonTextures } from '../utils/moonTexture.js';
 
 const DOME_RADIUS = 75;
 
@@ -165,10 +166,10 @@ export class HorizonModel {
   }
 
   _buildSunAndMoon() {
-    // 太陽與方向光
-    this.sunLight = new THREE.DirectionalLight(0xfffbeb, 1.8);
+    // 太陽方向光：提供月球表面環形山凹凸陰影與真實月相明暗交界線 (Terminator)
+    this.sunLight = new THREE.DirectionalLight(0xfffbeb, 2.8);
     this.group.add(this.sunLight);
-    this.group.add(new THREE.AmbientLight(0x94a3b8, 0.7));
+    this.group.add(new THREE.AmbientLight(0x94a3b8, 0.22));
 
     this.sunMesh = new THREE.Mesh(
       new THREE.SphereGeometry(3.2, 28, 28),
@@ -193,14 +194,19 @@ export class HorizonModel {
     );
     this.skyBodiesGroup.add(this.sunRayLine);
 
-    // 月球
+    // 月球：貼上真實月球正面月海 (風暴洋、雨海、澄海、靜海、危海) 與隕石坑凹凸陰影貼圖 (Bump Map)
+    const { colorMap, bumpMap } = createMoonTextures();
     this.moonMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(2.3, 24, 24),
+      new THREE.SphereGeometry(3.0, 48, 48),
       new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
-        roughness: 0.75,
-        emissive: 0x334155,
-        emissiveIntensity: 0.35
+        map: colorMap,
+        bumpMap: bumpMap,
+        bumpScale: 0.38,
+        roughness: 0.88,
+        metalness: 0.02,
+        emissive: 0x1e293b,
+        emissiveMap: colorMap,
+        emissiveIntensity: 0.12
       })
     );
     this.pickables.push(this.moonMesh);
@@ -297,7 +303,8 @@ export class HorizonModel {
     const sunPos = altAzToHorizonVector3(ephemeris.sun.altitude, ephemeris.sun.azimuth, DOME_RADIUS);
     this.sunMesh.position.copy(sunPos);
     this.sunLabel.position.copy(sunPos.clone().add(new THREE.Vector3(0, 4.2, 0)));
-    this.sunLight.position.copy(sunPos);
+    // 將太陽平行光源拉遠，使天頂圓頂上的月球也能根據真實日地月相對角度受光呈現凹凸陰影與月相
+    this.sunLight.position.copy(sunPos.clone().normalize().multiplyScalar(DOME_RADIUS * 6));
 
     this.sunRayLine.geometry.setFromPoints([new THREE.Vector3(0, 0, 0), sunPos]);
     this.sunRayLine.computeLineDistances();
@@ -333,10 +340,17 @@ export class HorizonModel {
       this.shadowTip.visible = false;
     }
 
-    // 3. 月球地平位置
+    // 3. 月球地平位置與潮汐鎖定方向 (固定將月球正面 Near Side 朝向地球中央觀測者，北極對準北天極方向)
     const moonPos = altAzToHorizonVector3(ephemeris.moon.altitude, ephemeris.moon.azimuth, DOME_RADIUS * 0.96);
     this.moonMesh.position.copy(moonPos);
-    this.moonLabel.position.copy(moonPos.clone().add(new THREE.Vector3(0, 3.6, 0)));
+
+    // 北天極在地平座標系中的方向：方位角 0° (正北)，仰角 = 觀測者緯度 lat
+    const northCelestialPoleDir = altAzToHorizonVector3(ephemeris.lat, 0, 1).normalize();
+    this.moonMesh.up.copy(northCelestialPoleDir);
+    // lookAt(0,0,0) 會將月球 Mesh 的 +Z 軸（貼圖中設定為月面經度 0° 正面中央：雨海、靜海、危海、風暴洋）永遠朝向地球觀測點
+    this.moonMesh.lookAt(0, 0, 0);
+
+    this.moonLabel.position.copy(moonPos.clone().add(new THREE.Vector3(0, 4.2, 0)));
 
     this.moonRayLine.geometry.setFromPoints([new THREE.Vector3(0, 0, 0), moonPos]);
     this.moonRayLine.computeLineDistances();
@@ -346,7 +360,7 @@ export class HorizonModel {
       type: 'HorizonBody',
       title: `🌙 月球 (${moonAbove ? '地平線上可見' : '地平線下'})`,
       subtitle: `仰角 Altitude: ${ephemeris.moon.altitude.toFixed(2)}° | 方位角 Azimuth: ${ephemeris.moon.azimuth.toFixed(2)}°`,
-      details: `月相：${ephemeris.moon.phaseName} | 照明率 ${(ephemeris.moon.fraction * 100).toFixed(1)}%`
+      details: `月相：${ephemeris.moon.phaseName} | 照明率 ${(ephemeris.moon.fraction * 100).toFixed(1)}%\n潮汐鎖定：月球正面（風暴洋、雨海、澄海、靜海、危海與第谷坑）固定朝向地球觀測者。`
     };
   }
 }
