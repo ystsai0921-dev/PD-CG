@@ -9,6 +9,7 @@ import { formatRA } from '../utils/astronomy.js';
  * - 下由地平線起 (仰角 Altitude = 0°)
  * - 上至頭頂天頂 (仰角 Altitude = 90°)
  * - 左右橫跨 180° (中心方位角 ± 90°)
+ * - 支援滑鼠 Hover 到任何星體（太陽、月球、行星、恆星、星座標籤）或軌跡線（黃道線、赤道線、星座連線、地平線、子午線）即時跳出說明視窗解說
  */
 const DIRECTION_CONFIG = {
   N: { centerAz: 0, nameZh: '北方天幕', nameEn: 'North Sky', leftLabel: '西 W (270°)', centerLabel: '北 N (0°)', rightLabel: '東 E (90°)' },
@@ -17,16 +18,30 @@ const DIRECTION_CONFIG = {
   W: { centerAz: 270, nameZh: '西方天幕', nameEn: 'West Sky', leftLabel: '南 S (180°)', centerLabel: '西 W (270°)', rightLabel: '北 N (0°)' }
 };
 
+function distToSegmentSq(px, py, x1, y1, x2, y2) {
+  const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+  if (l2 === 0) return (px - x1) * (px - x1) + (py - y1) * (py - y1);
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projX = x1 + t * (x2 - x1);
+  const projY = y1 + t * (y2 - y1);
+  return (px - projX) * (px - projX) + (py - projY) * (py - projY);
+}
+
 export class SkyScreenView {
-  constructor(canvas, onSelectObject) {
+  constructor(canvas, tooltipEl, onSelectObject) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+    this.tooltipEl = tooltipEl;
     this.onSelectObject = onSelectObject;
 
     this.active = false;
     this.direction = 'S'; // 'E' | 'S' | 'W' | 'N'
     this.ephemeris = null;
-    this.interactiveTargets = [];
+
+    // 供滑鼠 Hover 與點擊偵測的點目標與線段目標
+    this.pointTargets = [];
+    this.lineTargets = [];
 
     // 產生固定種子的背景微光星群 (RA 0~24h, Dec -90~90)
     this.bgStars = [];
@@ -51,23 +66,113 @@ export class SkyScreenView {
       if (this.active) this.render();
     });
 
+    this.canvas.addEventListener('pointermove', (e) => {
+      if (!this.active) return;
+      this._handlePointerMove(e);
+    });
+
+    this.canvas.addEventListener('pointerleave', () => {
+      this._hideTooltip();
+    });
+
     this.canvas.addEventListener('click', (e) => {
       if (!this.active) return;
-      const rect = this.canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+      const hit = this._findHitTarget(e);
+      if (hit && this.onSelectObject) {
+        this.onSelectObject(hit);
+      }
+    });
+  }
 
-      for (const item of this.interactiveTargets) {
+  _findHitTarget(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // 1. 優先偵測星體與星座標籤 (Point / Box targets)
+    for (let i = this.pointTargets.length - 1; i >= 0; i--) {
+      const item = this.pointTargets[i];
+      if (item.box) {
+        if (
+          mx >= item.box.x &&
+          mx <= item.box.x + item.box.w &&
+          my >= item.box.y &&
+          my <= item.box.y + item.box.h
+        ) {
+          return item.info;
+        }
+      } else {
         const dx = mx - item.x;
         const dy = my - item.y;
         if (dx * dx + dy * dy <= item.hitRadius * item.hitRadius) {
-          if (this.onSelectObject) {
-            this.onSelectObject(item.info);
-          }
-          break;
+          return item.info;
         }
       }
-    });
+    }
+
+    // 2. 次優先偵測軌跡線與星座連線 (Line segment targets)
+    const maxLineDistSq = 7 * 7; // 距離線段 7px 內即觸發
+    let bestLineInfo = null;
+    let bestDistSq = maxLineDistSq;
+
+    for (let i = 0; i < this.lineTargets.length; i++) {
+      const seg = this.lineTargets[i];
+      const dSq = distToSegmentSq(mx, my, seg.x1, seg.y1, seg.x2, seg.y2);
+      if (dSq <= bestDistSq) {
+        bestDistSq = dSq;
+        bestLineInfo = seg.info;
+      }
+    }
+
+    return bestLineInfo;
+  }
+
+  _handlePointerMove(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const info = this._findHitTarget(e);
+    if (!info) {
+      this.canvas.style.cursor = 'default';
+      this._hideTooltip();
+      return;
+    }
+
+    this.canvas.style.cursor = 'pointer';
+    if (this.onSelectObject) {
+      this.onSelectObject(info);
+    }
+
+    if (this.tooltipEl) {
+      const lines = info.details ? info.details.replace(/\n/g, '<br/>') : '';
+      this.tooltipEl.innerHTML = `
+        <div class="tt-title">${info.title}</div>
+        <div class="tt-sub">${info.subtitle || ''}</div>
+        <div class="tt-body">${lines}</div>
+      `;
+      this.tooltipEl.classList.remove('hidden');
+
+      // 計算浮動視窗位置，避免超出天幕右緣或下緣
+      const parentW = this.canvas.parentElement.clientWidth;
+      const parentH = this.canvas.parentElement.clientHeight;
+      const ttW = this.tooltipEl.offsetWidth || 260;
+      const ttH = this.tooltipEl.offsetHeight || 95;
+
+      let left = mx + 16;
+      let top = my + 16;
+      if (left + ttW + 12 > parentW) left = Math.max(12, mx - ttW - 14);
+      if (top + ttH + 12 > parentH) top = Math.max(12, my - ttH - 14);
+
+      this.tooltipEl.style.left = `${left}px`;
+      this.tooltipEl.style.top = `${top}px`;
+    }
+  }
+
+  _hideTooltip() {
+    if (this.tooltipEl) {
+      this.tooltipEl.classList.add('hidden');
+    }
   }
 
   setDirection(dir) {
@@ -79,7 +184,9 @@ export class SkyScreenView {
 
   setActive(flag) {
     this.active = flag;
-    if (this.active) {
+    if (!flag) {
+      this._hideTooltip();
+    } else {
       this.render();
     }
   }
@@ -91,20 +198,13 @@ export class SkyScreenView {
     }
   }
 
-  /**
-   * 將赤道座標 (raHours, decDeg) 透過觀測者當前時間與經緯度轉為地平座標 (az, alt)
-   */
   _raDecToAltAz(raHours, decDeg, astroTime, observer) {
     const hor = Astronomy.Horizon(astroTime, observer, raHours, decDeg, 'normal');
     return { az: hor.azimuth, alt: hor.altitude };
   }
 
-  /**
-   * 將方位角差值正規化至 [-180°, +180°]
-   */
   _deltaAz(az, centerAz) {
-    let d = ((az - centerAz + 540) % 360) - 180;
-    return d;
+    return ((az - centerAz + 540) % 360) - 180;
   }
 
   render() {
@@ -124,7 +224,6 @@ export class SkyScreenView {
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    // 定義平面天幕繪圖框邊距 (留出上下左右座標刻度與頂部返回列空間)
     const padLeft = 64;
     const padRight = 48;
     const padTop = 66;
@@ -136,7 +235,6 @@ export class SkyScreenView {
     const cfg = DIRECTION_CONFIG[this.direction] || DIRECTION_CONFIG.S;
     const centerAz = cfg.centerAz;
 
-    // 將 (dAz ∈ [-90, 90], alt ∈ [0, 90]) 映射到平面天幕像素 (x, y)
     const projectAltAz = (az, alt) => {
       const dAz = this._deltaAz(az, centerAz);
       const x = padLeft + ((dAz + 90) / 180) * plotW;
@@ -144,21 +242,21 @@ export class SkyScreenView {
       return { x, y, dAz, alt };
     };
 
+    this.pointTargets = [];
+    this.lineTargets = [];
+
     // 1. 依據太陽仰角繪製深邃星空或晨昏白晝天幕背景
     const sunAlt = this.ephemeris.sun.altitude;
     const skyGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotH);
     if (sunAlt > 6) {
-      // 白晝偏深藍觀星模擬背景
       skyGrad.addColorStop(0, '#0c1e3e');
       skyGrad.addColorStop(0.6, '#153264');
       skyGrad.addColorStop(1, '#1e4682');
     } else if (sunAlt > -12) {
-      // 晨昏暮光
       skyGrad.addColorStop(0, '#070d1d');
       skyGrad.addColorStop(0.7, '#111c38');
       skyGrad.addColorStop(1, '#2b244d');
     } else {
-      // 夜晚深邃星空
       skyGrad.addColorStop(0, '#03060f');
       skyGrad.addColorStop(0.65, '#081021');
       skyGrad.addColorStop(1, '#0e1b33');
@@ -179,7 +277,7 @@ export class SkyScreenView {
     const astroTime = Astronomy.MakeTime(this.ephemeris.date);
     const observer = new Astronomy.Observer(this.ephemeris.lat, this.ephemeris.lon, 0);
 
-    // 2. 繪製地平經緯網格 (仰角 0° ~ 90° 每 15° 一條水平線；方位角 -90° ~ +90° 每 15° 一條垂直線)
+    // 2. 繪製地平經緯網格並註冊中心方位子午線與地平線 Hover 說明
     ctx.lineWidth = 1;
     for (let alt = 0; alt <= 90; alt += 15) {
       const y = padTop + ((90 - alt) / 90) * plotH;
@@ -202,7 +300,36 @@ export class SkyScreenView {
       ctx.moveTo(x, padTop);
       ctx.lineTo(x, padTop + plotH);
       ctx.stroke();
+
+      if (isCenter) {
+        this.lineTargets.push({
+          x1: x,
+          y1: padTop,
+          x2: x,
+          y2: padTop + plotH,
+          info: {
+            type: 'Line',
+            title: `🧭 ${cfg.centerLabel} 中心方位線`,
+            subtitle: `方位角 Azimuth = ${centerAz}° (天頂垂直基準線)`,
+            details: `代表觀測者正對 ${cfg.centerLabel} 的垂直視線切面，由地平線 (0°) 直達頭頂天頂 (90°)。`
+          }
+        });
+      }
     }
+
+    // 地平線 (Altitude = 0°) Hover 說明
+    this.lineTargets.push({
+      x1: padLeft,
+      y1: padTop + plotH,
+      x2: padLeft + plotW,
+      y2: padTop + plotH,
+      info: {
+        type: 'Line',
+        title: '🌄 觀測者地平線 (Local Horizon)',
+        subtitle: `地平仰角 Altitude = 0° | 橫跨 ${cfg.leftLabel} 至 ${cfg.rightLabel}`,
+        details: `觀測者所在地 (${this.ephemeris.lat.toFixed(2)}°N, ${this.ephemeris.lon.toFixed(2)}°E) 的地面水平切線，高於此線的天體才在當地地平線上可見。`
+      }
+    });
 
     // 3. 繪製背景繁星
     this.bgStars.forEach((s) => {
@@ -216,7 +343,7 @@ export class SkyScreenView {
       ctx.fill();
     });
 
-    // 4. 繪製天球赤道弧線 (Celestial Equator) 與黃道弧線 (Ecliptic)
+    // 4. 繪製天球赤道弧線 (Celestial Equator) 與黃道弧線 (Ecliptic)，並註冊軌跡線段供 Hover 解說
     this._drawCelestialCurve(
       ctx,
       (deg) => {
@@ -224,8 +351,14 @@ export class SkyScreenView {
         return this._raDecToAltAz(ra, 0, astroTime, observer);
       },
       projectAltAz,
-      'rgba(56, 189, 248, 0.45)',
-      [6, 4]
+      'rgba(56, 189, 248, 0.55)',
+      [6, 4],
+      {
+        type: 'Trajectory',
+        title: '🌐 天球赤道 (Celestial Equator)',
+        subtitle: '赤緯 Declination = 0°',
+        details: '地球赤道面無限延伸至天球所形成的平面圓弧。天球赤道與黃道相交於春分點與秋分點（夾角約 23.44°）。'
+      }
     );
 
     const eps = (23.43928 * Math.PI) / 180;
@@ -242,13 +375,48 @@ export class SkyScreenView {
         return this._raDecToAltAz(ra, dec, astroTime, observer);
       },
       projectAltAz,
-      'rgba(245, 158, 11, 0.78)',
-      []
+      'rgba(245, 158, 11, 0.85)',
+      [],
+      {
+        type: 'Trajectory',
+        title: '☀ 黃道軌跡線 (Ecliptic Path)',
+        subtitle: `黃赤交角 23.44° | 目前太陽位於 ${this.ephemeris.sun.zodiac.symbol} ${this.ephemeris.sun.zodiac.nameZh}`,
+        details: '太陽一年中在天球背景上視運動所行經的軌跡，黃道十二宮星座即依序分佈於此金色軌跡帶上，月球與八大行星也都在黃道附近運行。'
+      }
     );
 
-    this.interactiveTargets = [];
+    // 5. 繪製當日太陽與月球的地平軌跡弧線 (Daily Diurnal Path) 並支援 Hover 解說
+    this._drawDailyBodyPath(
+      ctx,
+      Astronomy.Body.Sun,
+      observer,
+      projectAltAz,
+      'rgba(250, 204, 21, 0.42)',
+      [3, 4],
+      {
+        type: 'Trajectory',
+        title: '☀ 今日太陽周日運動軌跡 (Solar Diurnal Arc)',
+        subtitle: `觀測日期：${this.ephemeris.date.toLocaleDateString('zh-TW')}`,
+        details: '因地球自轉，太陽今日在當地天幕由東向西升落所劃出的視運動弧線。'
+      }
+    );
 
-    // 5. 繪製黃道十二宮與其他代表星座連線與恆星
+    this._drawDailyBodyPath(
+      ctx,
+      Astronomy.Body.Moon,
+      observer,
+      projectAltAz,
+      'rgba(147, 197, 253, 0.42)',
+      [2, 4],
+      {
+        type: 'Trajectory',
+        title: '🌙 今日月球周日運動軌跡 (Lunar Diurnal Arc)',
+        subtitle: `目前月相：${this.ephemeris.moon.phaseName}`,
+        details: '月球今日在當地天幕由東向西升落所劃出的周日視運動軌跡弧線。'
+      }
+    );
+
+    // 6. 繪製黃道十二宮與其他代表星座連線與恆星
     const drawConstellations = (list, isZodiac) => {
       list.forEach((c) => {
         const projectedStars = c.stars.map((st) => {
@@ -260,20 +428,39 @@ export class SkyScreenView {
           };
         });
 
-        // 星座連線
+        const constInfo = {
+          type: 'Constellation',
+          title: `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn})`,
+          subtitle: isZodiac ? `黃道十二宮星座 | 黃經起始 ${c.eclipticStart}°` : '全天重要指標星座',
+          details: c.desc
+        };
+
+        // 星座連線 (同時加入 lineTargets 讓滑鼠 Hover 到連線時跳出星座解說)
         ctx.strokeStyle = isZodiac ? 'rgba(245, 158, 11, 0.85)' : 'rgba(56, 189, 248, 0.55)';
         ctx.lineWidth = isZodiac ? 1.8 : 1.2;
         c.lines.forEach(([i, j]) => {
           const a = projectedStars[i];
           const b = projectedStars[j];
           if (!a || !b) return;
-          // 避免跨 180° 邊界拉出長橫線
           if (Math.abs(a.dAz - b.dAz) > 100) return;
           if ((a.alt < -5 && b.alt < -5) || (Math.abs(a.dAz) > 98 && Math.abs(b.dAz) > 98)) return;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
           ctx.stroke();
+
+          this.lineTargets.push({
+            x1: a.x,
+            y1: a.y,
+            x2: b.x,
+            y2: b.y,
+            info: {
+              type: 'ConstellationLine',
+              title: `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn}) 星座連線`,
+              subtitle: `連接「${a.name.split(' ')[0]}」與「${b.name.split(' ')[0]}」`,
+              details: c.desc
+            }
+          });
         });
 
         // 繪製恆星圓點
@@ -293,20 +480,20 @@ export class SkyScreenView {
           ctx.arc(st.x, st.y, r, 0, Math.PI * 2);
           ctx.fill();
 
-          this.interactiveTargets.push({
+          this.pointTargets.push({
             x: st.x,
             y: st.y,
-            hitRadius: 10,
+            hitRadius: 11,
             info: {
               type: 'Star',
               title: `✦ ${st.name}`,
-              subtitle: `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn})`,
-              details: `地平仰角: ${st.alt.toFixed(1)}° | 方位角: ${st.az.toFixed(1)}°\n赤經: ${formatRA(st.ra)} | 赤緯: ${st.dec.toFixed(2)}° | 視星等: ${st.mag}`
+              subtitle: `所屬星座：${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn})`,
+              details: `地平仰角: ${st.alt.toFixed(1)}° | 方位角: ${st.az.toFixed(1)}°\n赤經: ${formatRA(st.ra)} | 赤緯: ${st.dec.toFixed(2)}° | 視星等: ${st.mag} 等\n${c.desc}`
             }
           });
         });
 
-        // 繪製星座中英文標籤
+        // 繪製星座中英文標籤 (支援滑鼠 Hover 到標籤框解說該星座)
         if (visibleCount > 0) {
           const cx = sumX / visibleCount;
           const cy = sumY / visibleCount - 12;
@@ -316,11 +503,16 @@ export class SkyScreenView {
 
           ctx.font = '700 12px "Songti TC", "STSong", "PMingLiU", serif';
           const tw = ctx.measureText(labelText).width;
+          const bx = cx - tw / 2 - 6;
+          const by = cy - 10;
+          const bw = tw + 12;
+          const bh = 18;
+
           ctx.fillStyle = isZodiac ? 'rgba(45, 28, 6, 0.82)' : 'rgba(7, 11, 20, 0.72)';
           ctx.strokeStyle = isZodiac ? 'rgba(245, 158, 11, 0.6)' : 'rgba(148, 163, 184, 0.35)';
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.roundRect(cx - tw / 2 - 6, cy - 10, tw + 12, 18, 4);
+          ctx.roundRect(bx, by, bw, bh, 4);
           ctx.fill();
           ctx.stroke();
 
@@ -328,6 +520,11 @@ export class SkyScreenView {
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(labelText, cx, cy);
+
+          this.pointTargets.push({
+            box: { x: bx, y: by, w: bw, h: bh },
+            info: constInfo
+          });
         }
       });
     };
@@ -335,7 +532,7 @@ export class SkyScreenView {
     drawConstellations(OTHER_CONSTELLATIONS, false);
     drawConstellations(ZODIAC_CONSTELLATIONS, true);
 
-    // 6. 繪製太陽、月球與各大行星在天幕上的位置
+    // 7. 繪製太陽、月球與各大行星在天幕上的位置
     this.ephemeris.geocentricPlanets.forEach((p) => {
       if (p.altitude < 0) return;
       const pt = projectAltAz(p.azimuth, p.altitude);
@@ -352,15 +549,15 @@ export class SkyScreenView {
       ctx.textAlign = 'left';
       ctx.fillText(`${p.symbol} ${p.nameZh}`, pt.x + 8, pt.y + 3);
 
-      this.interactiveTargets.push({
+      this.pointTargets.push({
         x: pt.x,
         y: pt.y,
-        hitRadius: 12,
+        hitRadius: 13,
         info: {
           type: 'Planet',
           title: `${p.symbol} ${p.nameZh} (${p.nameEn})`,
-          subtitle: `仰角 ${p.altitude.toFixed(1)}° | 方位角 ${p.azimuth.toFixed(1)}°`,
-          details: `距離地球 ${p.distAU.toFixed(2)} AU | 赤經 ${formatRA(p.ra)} | 赤緯 ${p.dec.toFixed(2)}°`
+          subtitle: `地平仰角 ${p.altitude.toFixed(1)}° | 方位角 ${p.azimuth.toFixed(1)}°`,
+          details: `距離地球: ${p.distAU.toFixed(2)} AU\n赤經: ${formatRA(p.ra)} | 赤緯: ${p.dec.toFixed(2)}°`
         }
       });
     });
@@ -388,15 +585,15 @@ export class SkyScreenView {
         ctx.textAlign = 'left';
         ctx.fillText('☀ 太陽 Sun', sp.x + 10, sp.y + 4);
 
-        this.interactiveTargets.push({
+        this.pointTargets.push({
           x: sp.x,
           y: sp.y,
-          hitRadius: 14,
+          hitRadius: 16,
           info: {
             type: 'Body',
             title: '☀ 太陽 (Sun)',
-            subtitle: `仰角 ${this.ephemeris.sun.altitude.toFixed(1)}° | 方位角 ${this.ephemeris.sun.azimuth.toFixed(1)}°`,
-            details: `位於 ${this.ephemeris.sun.zodiac.symbol} ${this.ephemeris.sun.zodiac.nameZh} (${this.ephemeris.sun.zodiac.nameEn})`
+            subtitle: `地平仰角 ${this.ephemeris.sun.altitude.toFixed(1)}° | 方位角 ${this.ephemeris.sun.azimuth.toFixed(1)}°`,
+            details: `目前位於黃道：${this.ephemeris.sun.zodiac.symbol} ${this.ephemeris.sun.zodiac.nameZh} (${this.ephemeris.sun.zodiac.nameEn})\n太陽黃經: ${this.ephemeris.sun.elon.toFixed(2)}° | 赤經: ${formatRA(this.ephemeris.sun.ra)}`
           }
         });
       }
@@ -416,15 +613,15 @@ export class SkyScreenView {
         ctx.textAlign = 'left';
         ctx.fillText('🌙 月球 Moon', mp.x + 10, mp.y + 4);
 
-        this.interactiveTargets.push({
+        this.pointTargets.push({
           x: mp.x,
           y: mp.y,
-          hitRadius: 14,
+          hitRadius: 15,
           info: {
             type: 'Body',
             title: '🌙 月球 (Moon)',
-            subtitle: `仰角 ${this.ephemeris.moon.altitude.toFixed(1)}° | 方位角 ${this.ephemeris.moon.azimuth.toFixed(1)}°`,
-            details: `月相：${this.ephemeris.moon.phaseName} (照明率 ${(this.ephemeris.moon.fraction * 100).toFixed(1)}%)`
+            subtitle: `地平仰角 ${this.ephemeris.moon.altitude.toFixed(1)}° | 方位角 ${this.ephemeris.moon.azimuth.toFixed(1)}°`,
+            details: `月相：${this.ephemeris.moon.phaseName} (照明率 ${(this.ephemeris.moon.fraction * 100).toFixed(1)}%)\n赤經: ${formatRA(this.ephemeris.moon.ra)} | 赤緯: ${this.ephemeris.moon.dec.toFixed(2)}°`
           }
         });
       }
@@ -432,7 +629,7 @@ export class SkyScreenView {
 
     ctx.restore(); // 結束天幕裁切區
 
-    // 7. 繪製地平線地面剪影與外框刻度 (下由地平線 0° 起，上至頭頂 90°，左右橫跨 180°)
+    // 8. 繪製地平線地面剪影與外框刻度
     ctx.fillStyle = '#071513';
     ctx.fillRect(padLeft, padTop + plotH, plotW, height - (padTop + plotH));
 
@@ -447,7 +644,7 @@ export class SkyScreenView {
     ctx.lineWidth = 1.2;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
-    // 8. 繪製左軸仰角刻度 (0° 地平線 ~ 90° 頭頂天頂)
+    // 9. 繪製左軸仰角刻度 (0° 地平線 ~ 90° 頭頂天頂)
     ctx.font = '700 12px "Songti TC", "STSong", "PMingLiU", serif';
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'right';
@@ -458,7 +655,7 @@ export class SkyScreenView {
       ctx.fillText(label, padLeft - 8, y);
     }
 
-    // 9. 繪製下軸方位角刻度 (左右橫跨 180°：-90° ~ 0° ~ +90°)
+    // 10. 繪製下軸方位角刻度 (左右橫跨 180°：-90° ~ 0° ~ +90°)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     for (let dAz = -90; dAz <= 90; dAz += 30) {
@@ -482,7 +679,7 @@ export class SkyScreenView {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(
-      `✦ ${cfg.nameZh} (${cfg.nameEn}) — 下由地平線 0° 起、上至頭頂天頂 90°、左右橫跨 180°`,
+      `✦ ${cfg.nameZh} (${cfg.nameEn}) — 游標移至星體或軌跡線可檢視解說`,
       padLeft + plotW / 2,
       padTop - 8
     );
@@ -490,21 +687,72 @@ export class SkyScreenView {
     ctx.restore();
   }
 
-  _drawCelestialCurve(ctx, sampleFn, projectFn, strokeStyle, dash) {
+  _drawCelestialCurve(ctx, sampleFn, projectFn, strokeStyle, dash, hoverInfo = null) {
     ctx.save();
     ctx.strokeStyle = strokeStyle;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.6;
     ctx.setLineDash(dash);
     ctx.beginPath();
 
     let prev = null;
-    for (let deg = 0; deg <= 360; deg += 2) {
+    for (let deg = 0; deg <= 360; deg += 3) {
       const { az, alt } = sampleFn(deg);
       const pt = projectFn(az, alt);
       const inside = pt.alt >= -2 && Math.abs(pt.dAz) <= 95;
       if (inside) {
         if (prev && Math.abs(pt.dAz - prev.dAz) < 30) {
           ctx.lineTo(pt.x, pt.y);
+          if (hoverInfo) {
+            this.lineTargets.push({
+              x1: prev.x,
+              y1: prev.y,
+              x2: pt.x,
+              y2: pt.y,
+              info: hoverInfo
+            });
+          }
+        } else {
+          ctx.moveTo(pt.x, pt.y);
+        }
+        prev = pt;
+      } else {
+        prev = null;
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  _drawDailyBodyPath(ctx, body, observer, projectFn, strokeStyle, dash, hoverInfo) {
+    ctx.save();
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+
+    const startOfDay = new Date(this.ephemeris.date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    let prev = null;
+    for (let m = 0; m <= 1440; m += 20) {
+      const sampleDate = new Date(startOfDay.getTime() + m * 60000);
+      const t = Astronomy.MakeTime(sampleDate);
+      const eq = Astronomy.Equator(body, t, observer, true, true);
+      const hor = Astronomy.Horizon(t, observer, eq.ra, eq.dec, 'normal');
+      const pt = projectFn(hor.azimuth, hor.altitude);
+
+      if (pt.alt >= -2 && Math.abs(pt.dAz) <= 95) {
+        if (prev && Math.abs(pt.dAz - prev.dAz) < 30) {
+          ctx.lineTo(pt.x, pt.y);
+          if (hoverInfo) {
+            this.lineTargets.push({
+              x1: prev.x,
+              y1: prev.y,
+              x2: pt.x,
+              y2: pt.y,
+              info: hoverInfo
+            });
+          }
         } else {
           ctx.moveTo(pt.x, pt.y);
         }

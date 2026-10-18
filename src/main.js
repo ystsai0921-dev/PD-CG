@@ -21,6 +21,7 @@ const els = {
   canvasContainer: document.getElementById('canvas-container'),
   skyScreenOverlay: document.getElementById('sky-screen-overlay'),
   skyScreenCanvas: document.getElementById('sky-screen-canvas'),
+  skyScreenTooltip: document.getElementById('sky-screen-tooltip'),
   selectSkyDir: document.getElementById('select-sky-dir'),
   btnExecSky: document.getElementById('btn-exec-sky'),
   btnExitSkyMain: document.getElementById('btn-exit-sky-main'),
@@ -71,7 +72,11 @@ const sceneManager = new SceneManager(els.canvasContainer, {
   }
 });
 
-const skyScreenView = new SkyScreenView(els.skyScreenCanvas, (info) => renderSelectionInfo(info));
+const skyScreenView = new SkyScreenView(
+  els.skyScreenCanvas,
+  els.skyScreenTooltip,
+  (info) => renderSelectionInfo(info)
+);
 
 // 啟動或關閉 L1 平面天幕投影模式
 function setSkyScreenMode(active) {

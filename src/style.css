@@ -542,6 +542,40 @@ input:focus {
   transform: translateY(-1px);
 }
 
+/* 天幕投影滑鼠 Hover 說明視窗 */
+.sky-tooltip {
+  position: absolute;
+  z-index: 25;
+  max-width: 290px;
+  padding: 9px 12px;
+  background: rgba(10, 16, 30, 0.94);
+  border: 1px solid rgba(245, 158, 11, 0.65);
+  border-radius: 7px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  color: var(--text-main);
+  line-height: 1.45;
+}
+
+.sky-tooltip .tt-title {
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
+  color: #fde68a;
+  margin-bottom: 2px;
+}
+
+.sky-tooltip .tt-sub {
+  font-size: var(--fs-content);
+  color: #7dd3fc;
+  margin-bottom: 4px;
+}
+
+.sky-tooltip .tt-body {
+  font-size: var(--fs-content);
+  color: #cbd5e1;
+}
+
 /* 頂部浮動操作列 (Orbit / Pan 左鍵切換鈕) */
 #interaction-toolbar {
   position: absolute;
