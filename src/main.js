@@ -390,7 +390,25 @@ function tickTime(now) {
   refreshAstronomy();
 }
 
+// 自動從 package.json 讀取實際版本號並同步左下角版本標籤
+async function syncAppVersionTag() {
+  const verEl = document.getElementById('app-version-tag');
+  if (!verEl) return;
+  try {
+    const res = await fetch('./package.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const pkg = await res.json();
+    if (pkg && pkg.version) {
+      const cleanVer = String(pkg.version).replace(/\.0$/, '');
+      verEl.textContent = cleanVer.startsWith('v') ? cleanVer : `v${cleanVer}`;
+    }
+  } catch (_) {
+    // 靜態環境若無法讀取則保留 HTML 內建版本標記
+  }
+}
+
 // 啟動系統
+syncAppVersionTag();
 initZodiacQuickbar();
 syncDateInputsFromState();
 bindUIEvents();

@@ -44,6 +44,7 @@ export class CelestialGlobeModel {
     this.flashGoldColor = new THREE.Color(0xfde047);
 
     this.zenithVec = new THREE.Vector3(0, 1, 0);
+    this.zenithToWorldUpQuat = new THREE.Quaternion();
     this.zenithSpinSteps = 0;
     this.currentZenithAngle = 0;
     this.targetZenithAngle = 0;
@@ -782,6 +783,16 @@ export class CelestialGlobeModel {
   }
 
   /**
+   * 將整個天球旋轉使「天頂旋轉軸 (Zenith Axis)」預設朝向世界座標 +Y (螢幕正上方)，
+   * 並疊加使用者點擊天頂旋轉符號所累計的 +90° 旋轉角
+   */
+  _applyGroupZenithOrientation() {
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const spinQuat = new THREE.Quaternion().setFromAxisAngle(worldUp, this.currentZenithAngle);
+    this.group.quaternion.copy(spinQuat).multiply(this.zenithToWorldUpQuat);
+  }
+
+  /**
    * 於每幀平滑插值天球繞天頂軸的 90° 旋轉動畫，並驅動選中星座或行星的閃爍高亮效果
    */
   animateZenithRotation(timeSec = performance.now() * 0.001) {
@@ -794,7 +805,7 @@ export class CelestialGlobeModel {
     } else {
       this.currentZenithAngle = this.targetZenithAngle;
     }
-    this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
+    this._applyGroupZenithOrientation();
 
     // 若有選中的星座或行星，執行閃爍三下後光暈消失、星體維持高亮的動畫
     if (this.activeHighlight) {
@@ -982,11 +993,12 @@ export class CelestialGlobeModel {
       details: `格林威治恆星時 GST: ${formatRA(ephemeris.gstHours)}\n地球自轉姿態與日照晝夜半球完全依據目前輸入的日期時間與經緯度即時計算。`
     };
 
-    // 2. 更新觀測者地平面切面方向 (當地天頂 Zenith 的赤經 = LST, 赤緯 = Lat)
+    // 2. 更新觀測者地平面切面方向 (當地天頂 Zenith 的赤經 = LST, 赤緯 = Lat)，並使天頂旋轉軸預設朝向螢幕正上方 (+Y)
     this.zenithVec.copy(raDecToVector3(ephemeris.lstHours, ephemeris.lat, 1).normalize());
     const upDefault = new THREE.Vector3(0, 1, 0);
     this.horizonGroup.quaternion.setFromUnitVectors(upDefault, this.zenithVec);
-    this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
+    this.zenithToWorldUpQuat.setFromUnitVectors(this.zenithVec, upDefault);
+    this._applyGroupZenithOrientation();
 
     // 2b. 根據太陽是否位於觀測者地平面以上 (sun.altitude >= 0)，動態切換地平面上下半球的天球晝夜顏色：
     // - 日出後～日落前 (sun.altitude >= 0)：上半球 (太陽所在側) 為亮天空藍，下半球為夜幕灰

@@ -235,10 +235,10 @@ export class SceneManager {
 
   resetCameraForCurrentScale() {
     if (this.currentScale === 'celestial') {
-      // L1 天球儀預設視角：從天球外斜上方俯視地球與黃道十二宮，亦可滾輪拉近到地球內部往外看
+      // L1 天球儀預設視角：使天頂旋轉軸朝向螢幕正上方 (+Y)，並完整納入天球外天頂按鈕與整個天球
       this.controls.setCameraPose(
-        new THREE.Vector3(0, 75, 215),
-        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 42, 265),
+        new THREE.Vector3(0, 8, 0),
         1.5,
         600
       );
