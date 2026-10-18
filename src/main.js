@@ -224,10 +224,11 @@ function updateControlModeUI(mode) {
 function renderSelectionInfo(info) {
   if (!info) return;
   const lines = info.details ? info.details.replace(/\n/g, '<br/>') : '';
+  const extra = info.extraHtml || '';
   els.selectionDetails.innerHTML = `
     <div class="sel-title">${info.title}</div>
     <div class="sel-sub">${info.subtitle || ''}</div>
-    <div class="sel-body">${lines}</div>
+    <div class="sel-body">${lines}${extra}</div>
   `;
 }
 

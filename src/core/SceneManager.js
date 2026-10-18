@@ -111,9 +111,19 @@ export class SceneManager {
     if (hits.length > 0) {
       const obj = hits[0].object;
       if (obj.userData) {
-        if (this.currentScale === 'celestial' && obj.userData.isZenithRotator) {
-          this.celestialModel.rotateAroundZenithBy90();
-          return;
+        if (this.currentScale === 'celestial') {
+          if (obj.userData.isZenithRotator) {
+            this.celestialModel.rotateAroundZenithBy90();
+            return;
+          }
+          if (obj.userData.type === 'Star') {
+            this.celestialModel.selectStar(obj.userData);
+            return;
+          }
+          if (obj.userData.bodyId && this.celestialModel.dynamicBodyMap[obj.userData.bodyId]) {
+            this.celestialModel.selectDynamicBody(obj.userData.bodyId);
+            return;
+          }
         }
         if (this.currentScale === 'solar' && obj.userData.bodyId) {
           this.setSolarTarget(obj.userData.bodyId);
@@ -145,6 +155,20 @@ export class SceneManager {
 
     // 隱藏非當前尺度的 CSS2D 標籤
     this._setLabelsVisible(this.celestialModel.labels, isCelestial && this.celestialLabelsEnabled !== false);
+    if (!isCelestial) {
+      this._setLabelsVisible(this.celestialModel.starDetailLabels, false);
+    } else if (
+      this.celestialModel.activeHighlight &&
+      this.celestialModel.activeHighlight.type === 'Constellation'
+    ) {
+      const cEntry =
+        this.celestialModel.constellationMap[this.celestialModel.activeHighlight.constellationId];
+      if (cEntry) {
+        cEntry.starEntries.forEach((s) => {
+          s.detailLabel.element.style.display = '';
+        });
+      }
+    }
     if (isCelestial && this.celestialModel.zenithRotateLabel) {
       this.celestialModel.zenithRotateLabel.element.style.display =
         this.celestialModel.horizonGroup.visible ? '' : 'none';
@@ -217,13 +241,8 @@ export class SceneManager {
       // 將相機移至從地球往該星座延伸的外側位置，正面觀看該黃道星座與中心地球（並考慮天頂軸旋轉後的姿態）
       const worldDir = found.centerDirection.clone().applyQuaternion(this.celestialModel.group.quaternion);
       this.controls.lookAtDirection(worldDir, 210);
-      this._handleObjectSelect({
-        type: 'Constellation',
-        constellationId: found.id,
-        title: `${found.symbol} ${found.nameZh} (${found.nameEn})`,
-        subtitle: `黃道十二宮 | 黃經起始 ${found.eclipticStart}°`,
-        details: found.desc
-      });
+      // 同步觸發該星座所有恆星閃爍高亮並顯現各顆星名字與星等
+      this.celestialModel.selectConstellation(constellationId);
     }
   }
 

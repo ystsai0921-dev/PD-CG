@@ -36,6 +36,13 @@ export class CelestialGlobeModel {
     );
 
     this.planetMeshes = {};
+    this.constellationMap = {};
+    this.dynamicBodyMap = {};
+    this.starDetailLabels = [];
+    this.activeHighlight = null;
+    this.flashWhiteColor = new THREE.Color(0xffffff);
+    this.flashGoldColor = new THREE.Color(0xfde047);
+
     this.zenithVec = new THREE.Vector3(0, 1, 0);
     this.zenithSpinSteps = 0;
     this.currentZenithAngle = 0;
@@ -294,6 +301,24 @@ export class CelestialGlobeModel {
     const cGroup = new THREE.Group();
     const starVectors = [];
     const centerSum = new THREE.Vector3();
+    const starEntries = [];
+
+    // 預先組裝該星座所有恆星的名字、視星等與赤道座標清單 HTML（供左下角詳情欄與點擊星座時呈現）
+    const starItemsHtml = c.stars
+      .map(
+        (st) => `
+        <div class="const-star-item">
+          <b>✦ ${st.name}</b> ｜ 視星等：<b>${st.mag} 等</b><br/>
+          赤經 RA: ${formatRA(st.ra)} ｜ 赤緯 Dec: ${st.dec >= 0 ? '+' : ''}${st.dec.toFixed(2)}°
+        </div>`
+      )
+      .join('');
+    const starListExtraHtml = `
+      <div class="const-star-list">
+        <div style="color:#fde68a; font-weight:700; margin-bottom:2px;">✦ ${c.nameZh}主要恆星與視星等 (${c.stars.length} 顆)：</div>
+        ${starItemsHtml}
+      </div>
+    `;
 
     c.stars.forEach((star) => {
       const pos = raDecToVector3(star.ra, star.dec, GLOBE_RADIUS);
@@ -302,20 +327,58 @@ export class CelestialGlobeModel {
 
       // 依視星等決定恆星球體大小
       const radius = Math.max(0.55, 1.85 - star.mag * 0.3);
+      const baseColorHex = isZodiac ? 0xfef08a : 0xbae6fd;
       const starGeo = new THREE.SphereGeometry(radius, 14, 14);
       const starMat = new THREE.MeshBasicMaterial({
-        color: isZodiac ? 0xfef08a : 0xbae6fd
+        color: baseColorHex
       });
       const starMesh = new THREE.Mesh(starGeo, starMat);
       starMesh.position.copy(pos);
 
+      // 恆星閃爍高亮外光暈球 (預設隱藏，當點選該星座或該恆星時啟動閃爍)
+      const haloGeo = new THREE.SphereGeometry(radius * 2.5, 16, 16);
+      const haloMat = new THREE.MeshBasicMaterial({
+        color: 0xfde047,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false
+      });
+      const haloMesh = new THREE.Mesh(haloGeo, haloMat);
+      haloMesh.visible = false;
+      starMesh.add(haloMesh);
+
       starMesh.userData = {
         type: 'Star',
         constellationId: c.id,
+        starName: star.name,
         title: `✦ ${star.name}`,
-        subtitle: `所屬星座：${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn})`,
-        details: `赤經 RA: ${formatRA(star.ra)} | 赤緯 Dec: ${star.dec.toFixed(2)}° | 視星等: ${star.mag} 等\n${c.desc}`
+        subtitle: `所屬星座：${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn}) ｜ 視星等 ${star.mag} 等`,
+        details: `赤經 RA: ${formatRA(star.ra)} | 赤緯 Dec: ${star.dec.toFixed(2)}° | 視星等: ${star.mag} 等\n${c.desc}`,
+        extraHtml: starListExtraHtml
       };
+
+      // 建立該顆恆星專屬的 3D 名字與星等標籤 (預設隱藏，點擊該星座時顯現於天球上)
+      const detailDiv = document.createElement('div');
+      detailDiv.className = 'star-detail-label';
+      detailDiv.style.display = 'none';
+      detailDiv.innerHTML = `✦ ${star.name} <span class="star-mag-tag">${star.mag}等</span>`;
+      detailDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectStar(starMesh.userData);
+      });
+      const detailLabel = new CSS2DObject(detailDiv);
+      detailLabel.position.copy(pos.clone().multiplyScalar(1.015));
+      cGroup.add(detailLabel);
+      this.starDetailLabels.push(detailLabel);
+
+      starEntries.push({
+        star,
+        mesh: starMesh,
+        haloMesh,
+        detailLabel,
+        baseColorHex,
+        baseColorObj: new THREE.Color(baseColorHex)
+      });
 
       this.pickables.push(starMesh);
       cGroup.add(starMesh);
@@ -328,11 +391,13 @@ export class CelestialGlobeModel {
         linePts.push(starVectors[i], starVectors[j]);
       }
     });
+    const baseLineColorHex = isZodiac ? 0xf59e0b : 0x38bdf8;
+    const baseLineOpacity = isZodiac ? 0.88 : 0.55;
     const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
     const lineMat = new THREE.LineBasicMaterial({
-      color: isZodiac ? 0xf59e0b : 0x38bdf8,
+      color: baseLineColorHex,
       transparent: true,
-      opacity: isZodiac ? 0.88 : 0.55
+      opacity: baseLineOpacity
     });
     cGroup.add(new THREE.LineSegments(lineGeo, lineMat));
 
@@ -342,28 +407,148 @@ export class CelestialGlobeModel {
       ? `${c.symbol} ${c.nameZh} <small>${c.nameEn}</small>`
       : `${c.nameZh} <small>${c.nameEn}</small>`;
 
+    const constSelectInfo = {
+      type: 'Constellation',
+      constellationId: c.id,
+      title: `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn})`,
+      subtitle: isZodiac ? `黃道十二宮 | 黃經起始 ${c.eclipticStart}° | 共 ${c.stars.length} 顆主要亮星` : `全天代表指標星座 | 共 ${c.stars.length} 顆主要亮星`,
+      details: c.desc,
+      extraHtml: starListExtraHtml,
+      direction: centerPos.clone().normalize()
+    };
+
     const labelObj = this._createLabel(
       centerPos,
       labelHtml,
       isZodiac ? 'celestial-label zodiac-label' : 'celestial-label',
       cGroup,
       () => {
-        if (this.onSelectObject) {
-          this.onSelectObject({
-            type: 'Constellation',
-            constellationId: c.id,
-            title: `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn})`,
-            subtitle: isZodiac ? `黃道十二宮 | 黃經起始 ${c.eclipticStart}°` : '全天代表指標星座',
-            details: c.desc,
-            direction: centerPos.clone().normalize()
-          });
-        }
+        this.selectConstellation(c.id);
       }
     );
     c.centerDirection = centerPos.clone().normalize();
     c.labelObject = labelObj;
 
+    this.constellationMap[c.id] = {
+      c,
+      isZodiac,
+      starEntries,
+      lineMat,
+      baseLineColorHex,
+      baseLineColorObj: new THREE.Color(baseLineColorHex),
+      baseLineOpacity,
+      labelObj,
+      selectInfo: constSelectInfo
+    };
+
     targetGroup.add(cGroup);
+  }
+
+  /**
+   * 清除目前天球上所有星座或行星的閃爍高亮狀態與各別恆星標籤
+   */
+  _clearHighlight() {
+    Object.values(this.constellationMap).forEach((entry) => {
+      entry.labelObj.element.classList.remove('active-blink-label');
+      entry.lineMat.color.setHex(entry.baseLineColorHex);
+      entry.lineMat.opacity = entry.baseLineOpacity;
+      entry.starEntries.forEach((s) => {
+        s.mesh.scale.setScalar(1);
+        s.mesh.material.color.setHex(s.baseColorHex);
+        s.haloMesh.visible = false;
+        s.haloMesh.material.opacity = 0;
+        s.detailLabel.element.style.display = 'none';
+      });
+    });
+
+    Object.values(this.dynamicBodyMap).forEach((b) => {
+      if (b.labelObj && b.labelObj.element) {
+        b.labelObj.element.classList.remove('active-blink-label');
+      }
+      b.mesh.scale.setScalar(1);
+      b.mesh.material.color.setHex(b.baseColorHex);
+      if (b.haloMesh) {
+        b.haloMesh.visible = false;
+        b.haloMesh.material.opacity = 0;
+      }
+    });
+
+    this.activeHighlight = null;
+  }
+
+  /**
+   * 點選星座名字（或黃道十二宮導覽鈕）：使該星座所有恆星與連線閃爍高亮，並在天球上與左下詳情欄顯現各顆星的名字與星等
+   */
+  selectConstellation(constellationId) {
+    this._clearHighlight();
+    const entry = this.constellationMap[constellationId];
+    if (!entry) return;
+
+    this.activeHighlight = {
+      type: 'Constellation',
+      constellationId
+    };
+
+    entry.labelObj.element.classList.add('active-blink-label');
+    entry.starEntries.forEach((s) => {
+      s.haloMesh.visible = true;
+      s.detailLabel.element.style.display = '';
+    });
+
+    if (this.onSelectObject) {
+      this.onSelectObject(entry.selectInfo);
+    }
+  }
+
+  /**
+   * 點選單顆恆星：同時讓所屬星座的所有恆星與名字/星等標籤顯現並閃爍高亮
+   */
+  selectStar(starUserData) {
+    if (!starUserData) return;
+    this._clearHighlight();
+
+    const entry = this.constellationMap[starUserData.constellationId];
+    if (entry) {
+      this.activeHighlight = {
+        type: 'Constellation',
+        constellationId: starUserData.constellationId,
+        focusStarName: starUserData.starName
+      };
+      entry.labelObj.element.classList.add('active-blink-label');
+      entry.starEntries.forEach((s) => {
+        s.haloMesh.visible = true;
+        s.detailLabel.element.style.display = '';
+      });
+    }
+
+    if (this.onSelectObject) {
+      this.onSelectObject(starUserData);
+    }
+  }
+
+  /**
+   * 點選行星（或太陽、月球）的名字或球體：使該星體與標籤閃爍高亮並顯示詳細資訊
+   */
+  selectDynamicBody(bodyId) {
+    this._clearHighlight();
+    const bEntry = this.dynamicBodyMap[bodyId];
+    if (!bEntry) return;
+
+    this.activeHighlight = {
+      type: 'Body',
+      bodyId
+    };
+
+    if (bEntry.labelObj && bEntry.labelObj.element) {
+      bEntry.labelObj.element.classList.add('active-blink-label');
+    }
+    if (bEntry.haloMesh) {
+      bEntry.haloMesh.visible = true;
+    }
+
+    if (this.onSelectObject && bEntry.mesh.userData) {
+      this.onSelectObject(bEntry.mesh.userData);
+    }
   }
 
   _buildObserverHorizon() {
@@ -521,9 +706,9 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 於每幀平滑插值天球繞天頂軸的 90° 旋轉動畫
+   * 於每幀平滑插值天球繞天頂軸的 90° 旋轉動畫，並驅動選中星座或行星的閃爍高亮效果
    */
-  animateZenithRotation() {
+  animateZenithRotation(timeSec = performance.now() * 0.001) {
     const diff = this.targetZenithAngle - this.currentZenithAngle;
     if (Math.abs(diff) > 0.0005) {
       this.currentZenithAngle += diff * 0.14;
@@ -534,6 +719,37 @@ export class CelestialGlobeModel {
       this.currentZenithAngle = this.targetZenithAngle;
     }
     this.group.quaternion.setFromAxisAngle(this.zenithVec, this.currentZenithAngle);
+
+    // 若有選中的星座或行星，執行週期性閃爍高亮動畫
+    if (this.activeHighlight) {
+      const pulse = 0.5 + 0.5 * Math.sin(timeSec * 7.5);
+      if (this.activeHighlight.type === 'Constellation') {
+        const entry = this.constellationMap[this.activeHighlight.constellationId];
+        if (entry) {
+          entry.lineMat.opacity = 0.45 + pulse * 0.55;
+          entry.lineMat.color.lerpColors(entry.baseLineColorObj, this.flashWhiteColor, pulse * 0.7);
+          entry.starEntries.forEach((s) => {
+            const isFocus =
+              this.activeHighlight.focusStarName && s.star.name === this.activeHighlight.focusStarName;
+            const scaleAmp = isFocus ? 1.35 + pulse * 1.25 : 1.15 + pulse * 0.95;
+            s.mesh.scale.setScalar(scaleAmp);
+            s.mesh.material.color.lerpColors(s.baseColorObj, this.flashWhiteColor, pulse * 0.85);
+            s.haloMesh.scale.setScalar(0.95 + pulse * 0.75);
+            s.haloMesh.material.opacity = 0.22 + pulse * 0.58;
+          });
+        }
+      } else if (this.activeHighlight.type === 'Body') {
+        const bEntry = this.dynamicBodyMap[this.activeHighlight.bodyId];
+        if (bEntry) {
+          bEntry.mesh.scale.setScalar(1.15 + pulse * 0.95);
+          bEntry.mesh.material.color.lerpColors(bEntry.baseColorObj, this.flashWhiteColor, pulse * 0.8);
+          if (bEntry.haloMesh) {
+            bEntry.haloMesh.scale.setScalar(0.95 + pulse * 0.85);
+            bEntry.haloMesh.material.opacity = 0.25 + pulse * 0.6;
+          }
+        }
+      }
+    }
   }
 
   _buildDynamicSkyBodies() {
@@ -541,6 +757,12 @@ export class CelestialGlobeModel {
     const sunGeo = new THREE.SphereGeometry(2.6, 24, 24);
     const sunMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
     this.sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    const sunHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(2.6 * 2.2, 20, 20),
+      new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0, depthWrite: false })
+    );
+    sunHalo.visible = false;
+    this.sunMesh.add(sunHalo);
     this.pickables.push(this.sunMesh);
     this.dynamicBodiesGroup.add(this.sunMesh);
 
@@ -549,13 +771,28 @@ export class CelestialGlobeModel {
       '☀ 太陽 <small>Sun</small>',
       'celestial-label zodiac-label',
       this.dynamicBodiesGroup,
-      () => this.onSelectObject && this.onSelectObject(this.sunMesh.userData)
+      () => this.selectDynamicBody('Sun')
     );
+
+    this.dynamicBodyMap.Sun = {
+      id: 'Sun',
+      mesh: this.sunMesh,
+      haloMesh: sunHalo,
+      labelObj: this.sunLabel,
+      baseColorHex: 0xfacc15,
+      baseColorObj: new THREE.Color(0xfacc15)
+    };
 
     // 月球在天球上的投影
     const moonGeo = new THREE.SphereGeometry(1.9, 20, 20);
     const moonMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
     this.moonMesh = new THREE.Mesh(moonGeo, moonMat);
+    const moonHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(1.9 * 2.3, 18, 18),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0, depthWrite: false })
+    );
+    moonHalo.visible = false;
+    this.moonMesh.add(moonHalo);
     this.pickables.push(this.moonMesh);
     this.dynamicBodiesGroup.add(this.moonMesh);
 
@@ -564,8 +801,17 @@ export class CelestialGlobeModel {
       '🌙 月球 <small>Moon</small>',
       'celestial-label planet-label',
       this.dynamicBodiesGroup,
-      () => this.onSelectObject && this.onSelectObject(this.moonMesh.userData)
+      () => this.selectDynamicBody('Moon')
     );
+
+    this.dynamicBodyMap.Moon = {
+      id: 'Moon',
+      mesh: this.moonMesh,
+      haloMesh: moonHalo,
+      labelObj: this.moonLabel,
+      baseColorHex: 0xe2e8f0,
+      baseColorObj: new THREE.Color(0xe2e8f0)
+    };
   }
 
   _createLabel(position, htmlContent, className, parentGroup, onClick = null) {
@@ -609,10 +855,6 @@ export class CelestialGlobeModel {
 
   update(ephemeris) {
     // 1. 根據格林威治恆星時 (GST) 旋轉中心地球：
-    // 在 Three.js SphereGeometry 中，經度 0° (格林威治) 位於 +X 軸，東經 +90°E 位於 -Z 軸。
-    // 當地球繞 +Y 軸正向旋轉 gstRad 時，格林威治子午線指向赤經 RA = GST，
-    // 而地球表面上任意經度 lon、緯度 lat 的地點（例如台灣/布柳之家 121°E, 24.8°N），
-    // 其世界座標法向量恰好指向赤經 RA = GST + lon = LST（地方恆星時）、赤緯 Dec = lat（當地天頂 Zenith）！
     const gstRad = THREE.MathUtils.degToRad(ephemeris.gstHours * 15);
     this.earthMesh.rotation.y = gstRad;
 
@@ -645,6 +887,7 @@ export class CelestialGlobeModel {
     this.earthSunLight.position.copy(sunPos);
     this.sunMesh.userData = {
       type: 'Body',
+      bodyId: 'Sun',
       title: '☀ 太陽 (Sun)',
       subtitle: `位於 ${ephemeris.sun.zodiac.symbol} ${ephemeris.sun.zodiac.nameZh} (${ephemeris.sun.zodiac.nameEn})`,
       details: `黃經: ${ephemeris.sun.elon.toFixed(2)}° | 赤經: ${formatRA(ephemeris.sun.ra)} | 赤緯: ${ephemeris.sun.dec.toFixed(2)}°\n當地地平仰角: ${ephemeris.sun.altitude.toFixed(1)}° | 方位角: ${ephemeris.sun.azimuth.toFixed(1)}°`
@@ -656,6 +899,7 @@ export class CelestialGlobeModel {
     this.moonLabel.position.copy(moonPos.clone().multiplyScalar(1.04));
     this.moonMesh.userData = {
       type: 'Body',
+      bodyId: 'Moon',
       title: '🌙 月球 (Moon)',
       subtitle: `${ephemeris.moon.phaseName} (照明率 ${(ephemeris.moon.fraction * 100).toFixed(1)}%)`,
       details: `赤經: ${formatRA(ephemeris.moon.ra)} | 赤緯: ${ephemeris.moon.dec.toFixed(2)}°\n當地地平仰角: ${ephemeris.moon.altitude.toFixed(1)}° | 方位角: ${ephemeris.moon.azimuth.toFixed(1)}°`
@@ -668,6 +912,18 @@ export class CelestialGlobeModel {
           new THREE.SphereGeometry(1.35, 16, 16),
           new THREE.MeshBasicMaterial({ color: p.color })
         );
+        const haloMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(1.35 * 2.5, 16, 16),
+          new THREE.MeshBasicMaterial({
+            color: 0xfde047,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false
+          })
+        );
+        haloMesh.visible = false;
+        mesh.add(haloMesh);
+
         this.pickables.push(mesh);
         this.dynamicBodiesGroup.add(mesh);
 
@@ -676,9 +932,17 @@ export class CelestialGlobeModel {
           `${p.symbol} ${p.nameZh} <small>${p.nameEn}</small>`,
           'celestial-label planet-label',
           this.dynamicBodiesGroup,
-          () => this.onSelectObject && this.onSelectObject(mesh.userData)
+          () => this.selectDynamicBody(p.id)
         );
-        this.planetMeshes[p.id] = { mesh, lbl };
+        this.planetMeshes[p.id] = { mesh, lbl, haloMesh };
+        this.dynamicBodyMap[p.id] = {
+          id: p.id,
+          mesh,
+          haloMesh,
+          labelObj: lbl,
+          baseColorHex: p.color,
+          baseColorObj: new THREE.Color(p.color)
+        };
       }
 
       const { mesh, lbl } = this.planetMeshes[p.id];
@@ -687,9 +951,10 @@ export class CelestialGlobeModel {
       lbl.position.copy(pos.clone().multiplyScalar(1.04));
       mesh.userData = {
         type: 'Planet',
+        bodyId: p.id,
         title: `${p.symbol} ${p.nameZh} (${p.nameEn})`,
-        subtitle: `距離地球 ${p.distAU.toFixed(2)} AU`,
-        details: `赤經: ${formatRA(p.ra)} | 赤緯: ${p.dec.toFixed(2)}°\n當地地平仰角: ${p.altitude.toFixed(1)}° | 方位角: ${p.azimuth.toFixed(1)}°`
+        subtitle: `距離地球 ${p.distAU.toFixed(2)} AU ｜ 當地仰角 ${p.altitude.toFixed(1)}°`,
+        details: `赤經 RA: ${formatRA(p.ra)} | 赤緯 Dec: ${p.dec.toFixed(2)}°\n當地地平仰角: ${p.altitude.toFixed(1)}° | 方位角: ${p.azimuth.toFixed(1)}°`
       };
     });
   }
