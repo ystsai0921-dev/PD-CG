@@ -5,8 +5,8 @@ import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js';
 // 應用程式全域狀態
 const state = {
   scale: 'celestial', // 'celestial' | 'solar' | 'horizon'
-  lat: 25.0330,
-  lon: 121.5654,
+  lat: 24.8136,
+  lon: 121.0322,
   date: new Date(),
   isPlaying: false,
   speedMultiplier: 3600, // 預設每秒推進 1 小時
@@ -176,8 +176,8 @@ function bindUIEvents() {
     const [lat, lon] = e.target.value.split(',').map(Number);
     state.lat = lat;
     state.lon = lon;
-    els.inputLat.value = lat.toFixed(2);
-    els.inputLon.value = lon.toFixed(2);
+    els.inputLat.value = lat.toFixed(4);
+    els.inputLon.value = lon.toFixed(4);
     refreshAstronomy();
   });
 
