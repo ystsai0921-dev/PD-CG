@@ -1,0 +1,563 @@
+:root {
+  --bg-dark: #070b14;
+  --bg-panel: rgba(13, 20, 36, 0.94);
+  --bg-card: rgba(22, 33, 58, 0.72);
+  --border-subtle: rgba(110, 148, 218, 0.22);
+  --border-focus: #60a5fa;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent-gold: #f59e0b;
+  --accent-blue: #38bdf8;
+  --accent-indigo: #6366f1;
+  --sidebar-width: 22%;
+  --sidebar-min: 290px;
+  --sidebar-max: 380px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 13px;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* 左側欄：佔約 20% 視窗寬度，上下分區 */
+#sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-min);
+  max-width: var(--sidebar-max);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
+  z-index: 20;
+  backdrop-filter: blur(12px);
+}
+
+.sidebar-section {
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+
+/* 左上：主要輸入資訊欄 (約佔 55% 高度) */
+#panel-input {
+  flex: 55;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+/* 左下：模型資訊欄 (約佔 45% 高度) */
+#panel-info {
+  flex: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(9, 14, 26, 0.65);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-icon {
+  color: var(--accent-gold);
+  font-size: 18px;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.panel-header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.panel-header h1 small,
+.panel-header h2 small {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.panel-header h2 {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(56, 189, 248, 0.16);
+  color: var(--accent-blue);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  font-weight: 600;
+}
+
+/* 控制項樣式 */
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.group-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #93c5fd;
+  letter-spacing: 0.2px;
+}
+
+/* 三大尺度按鈕 */
+.scale-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.scale-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 4px;
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.scale-btn:hover {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(147, 197, 253, 0.45);
+}
+
+.scale-btn.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(79, 70, 229, 0.45));
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.scale-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-bottom: 1px;
+}
+
+.scale-name {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.scale-name small {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* 輸入框與下拉選單 */
+.input-select,
+input[type="number"],
+input[type="date"],
+input[type="time"] {
+  width: 100%;
+  padding: 5px 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  color: var(--text-main);
+  font-size: 12px;
+  outline: none;
+  color-scheme: dark;
+}
+
+.input-select:focus,
+input:focus {
+  border-color: var(--border-focus);
+}
+
+.field-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-caption {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.mini-btn {
+  padding: 2px 7px;
+  font-size: 11px;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent-blue);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mini-btn:hover {
+  background: rgba(56, 189, 248, 0.28);
+}
+
+.time-playback {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.play-btn {
+  padding: 5px 11px;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.play-btn.playing {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.speed-select {
+  flex: 1;
+}
+
+/* 勾選清單 */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 8px;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.check-label input {
+  accent-color: var(--accent-blue);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 左下：模型資訊卡片 */
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-card {
+  padding: 9px 11px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+}
+
+.highlight-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(30, 27, 75, 0.75));
+  border-color: rgba(245, 158, 11, 0.38);
+}
+
+.info-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.info-value-large {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fde68a;
+  margin-bottom: 2px;
+}
+
+.info-sub {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.info-box {
+  padding: 7px 9px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.info-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.selection-details {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+/* 右側整個視窗：3D 顯示視窗 (約 80%) */
+#viewport {
+  flex: 1;
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #0d1527 0%, #050811 100%);
+}
+
+#canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* 頂部浮動操作列 (Orbit / Pan 左鍵切換鈕) */
+#interaction-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(13, 20, 36, 0.85);
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.toolbar-caption {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.mode-btn {
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn:hover {
+  border-color: var(--accent-blue);
+  background: rgba(51, 65, 85, 0.9);
+}
+
+.mode-btn.active {
+  background: rgba(245, 158, 11, 0.28);
+  color: #fde68a;
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+.mode-btn.secondary {
+  font-weight: 500;
+  color: #93c5fd;
+}
+
+.toolbar-hint {
+  background: rgba(13, 20, 36, 0.78);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.toolbar-hint b {
+  color: #e2e8f0;
+}
+
+/* 底部黃道十二宮導覽列 */
+#zodiac-quickbar {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(13, 20, 36, 0.84);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  overflow-x: auto;
+}
+
+.quickbar-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-gold);
+  white-space: nowrap;
+}
+
+.zodiac-pills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+
+.zodiac-pill {
+  padding: 3px 8px;
+  font-size: 11.5px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 99px;
+  color: #fde68a;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.zodiac-pill:hover,
+.zodiac-pill.active {
+  background: rgba(245, 158, 11, 0.3);
+  border-color: var(--accent-gold);
+  transform: translateY(-1px);
+}
+
+/* 3D HTML 標籤樣式 */
+.celestial-label {
+  color: #e2e8f0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(7, 11, 20, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  pointer-events: auto;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.celestial-label:hover {
+  transform: scale(1.08);
+  border-color: #60a5fa;
+  z-index: 5;
+}
+
+.celestial-label.zodiac-label {
+  color: #fef08a;
+  background: rgba(45, 28, 6, 0.82);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  font-weight: 600;
+}
+
+.celestial-label.zodiac-label small,
+.celestial-label small {
+  color: #cbd5e1;
+  font-weight: 400;
+  margin-left: 3px;
+  font-size: 10px;
+}
+
+.celestial-label.planet-label {
+  color: #7dd3fc;
+  background: rgba(12, 32, 54, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  font-weight: 600;
+}
+
+.celestial-label.cardinal-label {
+  color: #fca5a5;
+  background: rgba(40, 12, 18, 0.85);
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  font-weight: 700;
+  font-size: 12px;
+}

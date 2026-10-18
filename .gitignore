@@ -1,0 +1,13 @@
+# macOS / AppleDouble files
+.DS_Store
+._*
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs
+*.log
+npm-debug.log*

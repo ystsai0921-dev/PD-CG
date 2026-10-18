@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Celestial Globe — 多尺度天球儀與天文觀測系統</title>
+  <link rel="stylesheet" href="./src/style.css" />
+  <!-- Import map allows running directly via static server without Node/Vite bundling, while staying 100% compatible with Vite -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+        "astronomy-engine": "https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/+esm"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- 左側欄 (寬度約 20%)：分為左上輸入欄、左下模型資訊欄 -->
+    <aside id="sidebar">
+      <!-- 左上：主要輸入資訊欄 -->
+      <section id="panel-input" class="sidebar-section">
+        <header class="panel-header">
+          <div class="brand-title">
+            <span class="brand-icon">✦</span>
+            <h1>天球儀系統 <small>Celestial Globe</small></h1>
+          </div>
+        </header>
+
+        <!-- 尺度切換 (3 Levels) -->
+        <div class="control-group">
+          <label class="group-label">觀測尺度 (Scale Level)</label>
+          <div class="scale-tabs" id="scale-tabs">
+            <button class="scale-btn active" data-scale="celestial" title="以地球為中心觀察整個天球與黃道十二宮">
+              <span class="scale-num">L1</span>
+              <span class="scale-name">天球儀<small>Celestial Globe</small></span>
+            </button>
+            <button class="scale-btn" data-scale="solar" title="退一級至太陽系行星運動模型，可切換任意行星/衛星視點">
+              <span class="scale-num">L2</span>
+              <span class="scale-name">太陽系<small>Solar System</small></span>
+            </button>
+            <button class="scale-btn" data-scale="horizon" title="再退一級至所在地理位置的地平面觀察日月運動">
+              <span class="scale-num">L3</span>
+              <span class="scale-name">地平日月<small>Horizon View</small></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 地理位置設定 -->
+        <div class="control-group">
+          <label class="group-label">地理位置 (Observer Location)</label>
+          <div class="field-row">
+            <select id="preset-location" class="input-select">
+              <option value="25.0330,121.5654">台北 Taipei (25.03°N, 121.57°E)</option>
+              <option value="23.4700,120.9570">玉山 Yushan (23.47°N, 120.96°E)</option>
+              <option value="22.9997,120.2270">台南 Tainan (23.00°N, 120.23°E)</option>
+              <option value="35.6762,139.6503">東京 Tokyo (35.68°N, 139.65°E)</option>
+              <option value="51.4769,-0.0005">格林威治 Greenwich (51.48°N, 0.00°E)</option>
+              <option value="-23.5505,-46.6333">聖保羅 São Paulo (23.55°S, 46.63°W)</option>
+              <option value="0.0000,0.0000">赤道原點 Equator (0.00°, 0.00°)</option>
+              <option value="custom">自訂經緯度 Custom...</option>
+            </select>
+          </div>
+          <div class="field-grid-2">
+            <div class="field-item">
+              <span class="field-caption">緯度 Lat (°)</span>
+              <input type="number" id="input-lat" step="0.01" min="-90" max="90" value="25.03" />
+            </div>
+            <div class="field-item">
+              <span class="field-caption">經度 Lon (°)</span>
+              <input type="number" id="input-lon" step="0.01" min="-180" max="180" value="121.57" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 日期與時間設定 -->
+        <div class="control-group">
+          <div class="group-label-row">
+            <label class="group-label">日期與時間 (Date &amp; Time)</label>
+            <button id="btn-now" class="mini-btn" title="重設為現在時刻">現在 Now</button>
+          </div>
+          <div class="field-grid-2">
+            <div class="field-item">
+              <span class="field-caption">日期 Date</span>
+              <input type="date" id="input-date" />
+            </div>
+            <div class="field-item">
+              <span class="field-caption">時間 Time</span>
+              <input type="time" id="input-time" step="60" />
+            </div>
+          </div>
+          <div class="time-playback">
+            <button id="btn-play" class="play-btn" title="播放/暫停時間演化">▶ 播放</button>
+            <select id="select-speed" class="input-select speed-select" title="時間推進倍率">
+              <option value="1">1x 即時 (Real-time)</option>
+              <option value="60">1 分鐘 / 秒</option>
+              <option value="3600" selected>1 小時 / 秒</option>
+              <option value="86400">1 天 / 秒 (觀測公轉/月相)</option>
+              <option value="604800">7 天 / 秒 (觀測黃道日行)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 視角與圖層選項 (依當前尺度動態顯示) -->
+        <div class="control-group" id="scale-specific-controls">
+          <!-- Level 1 專用選項 -->
+          <div id="controls-celestial" class="sub-controls">
+            <label class="group-label">天球圖層 (Celestial Layers)</label>
+            <div class="checkbox-grid">
+              <label class="check-label"><input type="checkbox" id="chk-zodiac" checked /> 黃道十二宮星座連線</label>
+              <label class="check-label"><input type="checkbox" id="chk-ecliptic" checked /> 黃道圈與宮位刻度</label>
+              <label class="check-label"><input type="checkbox" id="chk-equator" checked /> 天球赤道與經緯網</label>
+              <label class="check-label"><input type="checkbox" id="chk-other-const" checked /> 其他代表星座</label>
+              <label class="check-label"><input type="checkbox" id="chk-horizon-plane" checked /> 觀測者地平面切面</label>
+              <label class="check-label"><input type="checkbox" id="chk-labels" checked /> 星座中英文標籤</label>
+            </div>
+          </div>
+
+          <!-- Level 2 專用選項 -->
+          <div id="controls-solar" class="sub-controls hidden">
+            <label class="group-label">太陽系視點中心 (Camera Target)</label>
+            <select id="select-solar-target" class="input-select">
+              <option value="Sun">☀ 太陽 Sun (預設中心)</option>
+              <option value="Mercury">☿ 水星 Mercury</option>
+              <option value="Venus">♀ 金星 Venus</option>
+              <option value="Earth">🌍 地球 Earth</option>
+              <option value="Moon">🌙 月球 Moon (衛星)</option>
+              <option value="Mars">♂ 火星 Mars</option>
+              <option value="Jupiter">♃ 木星 Jupiter</option>
+              <option value="Io">↳ 木衛一 Io (衛星)</option>
+              <option value="Europa">↳ 木衛二 Europa (衛星)</option>
+              <option value="Saturn">♄ 土星 Saturn</option>
+              <option value="Titan">↳ 土衛六 Titan (衛星)</option>
+              <option value="Uranus">♅ 天王星 Uranus</option>
+              <option value="Neptune">♆ 海王星 Neptune</option>
+            </select>
+            <div class="checkbox-grid" style="margin-top:8px;">
+              <label class="check-label"><input type="checkbox" id="chk-orbits" checked /> 顯示行星軌道線</label>
+              <label class="check-label"><input type="checkbox" id="chk-zodiac-backdrop" checked /> 顯示遠處黃道十二宮背景</label>
+            </div>
+          </div>
+
+          <!-- Level 3 專用選項 -->
+          <div id="controls-horizon" class="sub-controls hidden">
+            <label class="group-label">地平觀測選項 (Horizon Options)</label>
+            <div class="checkbox-grid">
+              <label class="check-label"><input type="checkbox" id="chk-day-path" checked /> 今日太陽與月球軌跡弧線</label>
+              <label class="check-label"><input type="checkbox" id="chk-az-grid" checked /> 地平座標天頂網格 (Alt-Az)</label>
+              <label class="check-label"><input type="checkbox" id="chk-shadow" checked /> 地面圭表立竿日影</label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 左下：模型資訊欄 -->
+      <section id="panel-info" class="sidebar-section">
+        <header class="panel-header sub-header">
+          <h2>模型與天體資訊 <small>Model &amp; Ephemeris</small></h2>
+          <span id="info-scale-badge" class="badge">L1 天球儀</span>
+        </header>
+
+        <div id="info-content" class="info-content">
+          <div class="info-card highlight-card">
+            <div class="info-title" id="info-target-title">太陽黃道位置 (Sun in Zodiac)</div>
+            <div class="info-value-large" id="info-zodiac-sign">--</div>
+            <div class="info-sub" id="info-zodiac-deg">黃經 --° | 赤經 --h --m | 赤緯 --°</div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-box">
+              <span class="info-label">☀ 太陽地平仰角 / 方位</span>
+              <span class="info-val" id="info-sun-altaz">--° / --°</span>
+            </div>
+            <div class="info-box">
+              <span class="info-label">🌙 月球地平仰角 / 方位</span>
+              <span class="info-val" id="info-moon-altaz">--° / --°</span>
+            </div>
+            <div class="info-box">
+              <span class="info-label">🌓 月相與照明率</span>
+              <span class="info-val" id="info-moon-phase">-- (--%)</span>
+            </div>
+            <div class="info-box">
+              <span class="info-label">⏱ 地方恆星時 (LST)</span>
+              <span class="info-val" id="info-lst">--h --m --s</span>
+            </div>
+          </div>
+
+          <div class="info-card selection-card" id="selection-card">
+            <div class="info-title">🎯 選中物件 / 星座詳情 (點擊星體或星座)</div>
+            <div id="selection-details" class="selection-details">
+              尚未選取特定天體。左鍵點擊畫面中的恆星、星座或行星即可檢視詳細資訊。
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 右側整個視窗：3D 顯示視窗 (約 80%) -->
+    <main id="viewport">
+      <div id="canvas-container"></div>
+
+      <!-- 頂部浮動操作列：預留給無中鍵滑鼠使用的左鍵 Orbit / Pan 切換鈕 + Esc 提示 -->
+      <div id="interaction-toolbar">
+        <div class="toolbar-group">
+          <span class="toolbar-caption">左鍵輔助模式：</span>
+          <button id="btn-mode-orbit" class="mode-btn" title="點擊開啟：直接用滑鼠左鍵旋轉視角 (按 Esc 退出)">
+            🔄 左鍵 Orbit (旋轉)
+          </button>
+          <button id="btn-mode-pan" class="mode-btn" title="點擊開啟：直接用滑鼠左鍵平移畫面 (按 Esc 退出)">
+            ✋ 左鍵 Pan (平移)
+          </button>
+          <button id="btn-reset-cam" class="mode-btn secondary" title="重置當前尺度的預設相機位置">
+            🎯 重置視角
+          </button>
+        </div>
+        <div class="toolbar-hint" id="toolbar-hint">
+          預設操作：<b>中鍵</b> Orbit 旋轉 ｜ <b>Shift + 中鍵</b> Pan 平移 ｜ <b>滾輪</b> 縮放 ｜ <b>Esc</b> 退出左鍵模式
+        </div>
+      </div>
+
+      <!-- 黃道十二宮快速導覽列 (底部浮動) -->
+      <div id="zodiac-quickbar">
+        <span class="quickbar-label">黃道十二宮：</span>
+        <div id="zodiac-pills" class="zodiac-pills"></div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
