@@ -168,10 +168,14 @@ export class SolarSystemModel {
     this.onSelectBody = onSelectBody;
     this.pickables = [];
     this.labels = [];
+    this.orbitLabels = [];
+    this.zodiacBackdropLabels = [];
+    this.isActiveScale = false;
 
     this.orbitsGroup = new THREE.Group();
     this.bodiesGroup = new THREE.Group();
     this.zodiacRingGroup = new THREE.Group();
+    this.zodiacRingGroup.visible = false; // 預設取消勾選「顯示遠處黃道十二宮背景」
     this.group.add(this.orbitsGroup, this.bodiesGroup, this.zodiacRingGroup);
 
     this.bodyMap = {};
@@ -591,6 +595,7 @@ export class SolarSystemModel {
       periLabel.position.copy(periPos.clone().add(new THREE.Vector3(0, -1.9, 0)));
       this.orbitsGroup.add(periLabel);
       this.labels.push(periLabel);
+      this.orbitLabels.push(periLabel);
 
       // 3. 地球遠日點 (Aphelion) 標記球與標籤
       const aphInfo = {
@@ -620,6 +625,7 @@ export class SolarSystemModel {
       aphLabel.position.copy(aphPos.clone().add(new THREE.Vector3(0, -1.9, 0)));
       this.orbitsGroup.add(aphLabel);
       this.labels.push(aphLabel);
+      this.orbitLabels.push(aphLabel);
     } else if (cfg.visEcc >= 0.1) {
       // 水星與火星等高離心率行星也在其近日點標示小光點
       const pPos = this._computeEllipticalOrbitPoint(cfg, cfg.periLon);
@@ -667,10 +673,12 @@ export class SolarSystemModel {
       const div = document.createElement('div');
       div.className = 'celestial-label zodiac-label';
       div.innerHTML = `${sign.symbol} ${sign.nameZh} <small>${sign.nameEn}</small>`;
+      div.style.display = 'none'; // 預設隱藏
       const lbl = new CSS2DObject(div);
       lbl.position.copy(pos);
       this.zodiacRingGroup.add(lbl);
       this.labels.push(lbl);
+      this.zodiacBackdropLabels.push(lbl);
     });
   }
 
@@ -689,8 +697,30 @@ export class SolarSystemModel {
   }
 
   setOptions(options) {
-    if (options.orbits !== undefined) this.orbitsGroup.visible = options.orbits;
-    if (options.zodiacBackdrop !== undefined) this.zodiacRingGroup.visible = options.zodiacBackdrop;
+    if (options.orbits !== undefined) {
+      this.orbitsGroup.visible = options.orbits;
+    }
+    if (options.zodiacBackdrop !== undefined) {
+      this.zodiacRingGroup.visible = options.zodiacBackdrop;
+    }
+    this.syncLabelsVisibility(this.isActiveScale);
+  }
+
+  syncLabelsVisibility(isSolarActive) {
+    this.isActiveScale = isSolarActive;
+    this.labels.forEach((lbl) => {
+      if (!isSolarActive) {
+        lbl.element.style.display = 'none';
+        return;
+      }
+      if (this.zodiacBackdropLabels.includes(lbl)) {
+        lbl.element.style.display = this.zodiacRingGroup.visible ? '' : 'none';
+      } else if (this.orbitLabels.includes(lbl)) {
+        lbl.element.style.display = this.orbitsGroup.visible ? '' : 'none';
+      } else {
+        lbl.element.style.display = '';
+      }
+    });
   }
 
   getTargetPosition(targetId) {

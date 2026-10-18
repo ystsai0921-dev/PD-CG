@@ -141,7 +141,7 @@ export class SceneManager {
 
     // 隱藏非當前尺度的 CSS2D 標籤
     this._setLabelsVisible(this.celestialModel.labels, isCelestial && this.celestialLabelsEnabled !== false);
-    this._setLabelsVisible(this.solarModel.labels, isSolar);
+    this.solarModel.syncLabelsVisibility(isSolar);
     this._setLabelsVisible(this.horizonModel.labels, isHorizon);
 
     this.resetCameraForCurrentScale();
