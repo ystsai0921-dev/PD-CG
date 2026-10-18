@@ -230,6 +230,9 @@ export class SceneManager {
 
   renderLoop() {
     requestAnimationFrame(() => this.renderLoop());
+    if (this.currentScale === 'horizon' && this.horizonModel) {
+      this.horizonModel.animateFlagAndShadow(performance.now() * 0.001);
+    }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
     this.labelRenderer.render(this.scene, this.camera);
