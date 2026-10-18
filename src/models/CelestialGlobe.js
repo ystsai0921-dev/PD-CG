@@ -402,8 +402,29 @@ export class CelestialGlobeModel {
     });
     cGroup.add(new THREE.LineSegments(lineGeo, lineMat));
 
-    // L1 預設僅簡潔表示星座名（點擊後才閃爍並顯現各顆恆星名字與詳細資訊）
-    const centerPos = centerSum.divideScalar(c.stars.length).normalize().multiplyScalar(GLOBE_RADIUS * 1.03);
+    // L1 預設僅簡潔表示星座名（點擊後才閃爍、適度 Zoom-in 並顯現各顆恆星名字與詳細資訊）
+    const centerDir = centerSum.divideScalar(c.stars.length).normalize();
+    const centerSpherePos = centerDir.clone().multiplyScalar(GLOBE_RADIUS);
+    const centerPos = centerDir.clone().multiplyScalar(GLOBE_RADIUS * 1.03);
+
+    // 計算該星群各恆星與中心的張角跨距，決定適度 Zoom-in 的最佳觀測距離（星群越緊密則拉越近，確保能清楚辨析各恆星）
+    let maxSpread = 0;
+    starEntries.forEach((sEntry, idx) => {
+      const starPos = starVectors[idx];
+      const dist = starPos.distanceTo(centerSpherePos);
+      if (dist > maxSpread) maxSpread = dist;
+
+      // 將各恆星標籤往星群外圍微幅扇形推開，避免相鄰恆星名字標籤重疊
+      const outward = new THREE.Vector3().subVectors(starPos, centerSpherePos);
+      if (outward.lengthSq() > 0.01) {
+        outward.normalize().multiplyScalar(1.6);
+      }
+      sEntry.detailLabel.position.copy(starPos.clone().multiplyScalar(1.015).add(outward));
+    });
+
+    // 預設天球距離約 228，適度 Zoom-in 距離介於 145 ~ 168（視星群跨距自動調整）
+    const zoomDistance = Math.round(Math.max(145, Math.min(168, GLOBE_RADIUS + 38 + maxSpread * 1.35)));
+
     const conciseLabelHtml = isZodiac ? `${c.symbol} ${c.nameZh}` : `${c.nameZh}`;
     const expandedLabelHtml = isZodiac
       ? `${c.symbol} ${c.nameZh} <small>${c.nameEn}</small>`
@@ -414,9 +435,10 @@ export class CelestialGlobeModel {
       constellationId: c.id,
       title: `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh} (${c.nameEn})`,
       subtitle: isZodiac ? `黃道十二宮 | 黃經起始 ${c.eclipticStart}° | 共 ${c.stars.length} 顆主要亮星` : `全天代表指標星座 | 共 ${c.stars.length} 顆主要亮星`,
-      details: `${c.desc}（按 Esc 鍵可退出閃爍高亮狀態）`,
+      details: `${c.desc}（按 Esc 鍵可退出閃爍高亮狀態並恢復視角）`,
       extraHtml: starListExtraHtml,
-      direction: centerPos.clone().normalize()
+      direction: centerDir.clone(),
+      zoomDistance
     };
 
     const labelObj = this._createLabel(
@@ -428,7 +450,8 @@ export class CelestialGlobeModel {
         this.selectConstellation(c.id);
       }
     );
-    c.centerDirection = centerPos.clone().normalize();
+    c.centerDirection = centerDir.clone();
+    c.zoomDistance = zoomDistance;
     c.labelObject = labelObj;
 
     this.constellationMap[c.id] = {

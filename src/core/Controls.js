@@ -33,6 +33,10 @@ export class CustomController {
     this.pointerCurrent = new THREE.Vector2();
     this.hasDragged = false;
 
+    // 平滑相機過渡目標 (點擊星座適度 Zoom in 時使用)
+    this.animTargetSpherical = null;
+    this.animTargetCenter = null;
+
     this._syncFromCamera();
     this._bindEvents();
   }
@@ -43,6 +47,8 @@ export class CustomController {
   }
 
   setCameraPose(position, target, minDistance = 2, maxDistance = 1200) {
+    this.animTargetSpherical = null;
+    this.animTargetCenter = null;
     this.minDistance = minDistance;
     this.maxDistance = maxDistance;
     this.target.copy(target);
@@ -61,11 +67,24 @@ export class CustomController {
   lookAtDirection(directionVec, distance = null) {
     const dist = distance !== null ? distance : this.spherical.radius;
     const dir = directionVec.clone().normalize();
-    // 從中心往該天球方向看，或將相機置於對向觀察該星座
-    const newPos = this.target.clone().addScaledVector(dir, dist);
-    this.camera.position.copy(newPos);
-    this.camera.lookAt(this.target);
-    this._syncFromCamera();
+    this.lookAtDirectionSmooth(dir, dist, new THREE.Vector3(0, 0, 0));
+  }
+
+  /**
+   * 平滑將相機轉向指定天球方向並縮放至適度距離 (供點擊星座名 Zoom in 或 Esc 退回使用)
+   */
+  lookAtDirectionSmooth(directionVec, distance, newTarget = null) {
+    const dir = directionVec.clone().normalize();
+    const desiredOffset = dir.multiplyScalar(distance);
+    const s = new THREE.Spherical().setFromVector3(desiredOffset);
+
+    // 處理方位角 theta 最短路徑插值 (-π ~ +π)
+    let dTheta = s.theta - this.spherical.theta;
+    dTheta = ((dTheta + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    s.theta = this.spherical.theta + dTheta;
+
+    this.animTargetSpherical = s;
+    this.animTargetCenter = newTarget ? newTarget.clone() : this.target.clone();
   }
 
   setLeftClickMode(mode) {
@@ -119,6 +138,8 @@ export class CustomController {
     // 中鍵 (button === 1)：Shift + 中鍵 = Pan，純中鍵 = Orbit
     if (e.button === 1) {
       e.preventDefault();
+      this.animTargetSpherical = null;
+      this.animTargetCenter = null;
       this.dragState = e.shiftKey ? 'pan' : 'orbit';
       this._updateCursor();
       return;
@@ -127,6 +148,8 @@ export class CustomController {
     // 左鍵 (button === 0)：若開啟左鍵輔助功能鍵，則執行對應之 Orbit 或 Pan
     if (e.button === 0 && this.leftClickMode !== 'none') {
       e.preventDefault();
+      this.animTargetSpherical = null;
+      this.animTargetCenter = null;
       this.dragState = this.leftClickMode;
       this._updateCursor();
     }
@@ -179,6 +202,8 @@ export class CustomController {
 
   _onWheel(e) {
     e.preventDefault();
+    this.animTargetSpherical = null;
+    this.animTargetCenter = null;
     if (e.deltaY < 0) {
       this.spherical.radius = Math.max(this.minDistance, this.spherical.radius / this.zoomSpeed);
     } else if (e.deltaY > 0) {
@@ -187,15 +212,36 @@ export class CustomController {
   }
 
   update() {
-    this.spherical.theta += this.sphericalDelta.theta;
-    this.spherical.phi += this.sphericalDelta.phi;
+    if (this.animTargetSpherical) {
+      const ease = 0.14;
+      this.spherical.theta += (this.animTargetSpherical.theta - this.spherical.theta) * ease;
+      this.spherical.phi += (this.animTargetSpherical.phi - this.spherical.phi) * ease;
+      this.spherical.radius += (this.animTargetSpherical.radius - this.spherical.radius) * ease;
+
+      if (this.animTargetCenter) {
+        this.target.lerp(this.animTargetCenter, ease);
+      }
+
+      const done =
+        Math.abs(this.animTargetSpherical.theta - this.spherical.theta) < 0.001 &&
+        Math.abs(this.animTargetSpherical.phi - this.spherical.phi) < 0.001 &&
+        Math.abs(this.animTargetSpherical.radius - this.spherical.radius) < 0.08;
+      if (done) {
+        this.spherical.copy(this.animTargetSpherical);
+        if (this.animTargetCenter) this.target.copy(this.animTargetCenter);
+        this.animTargetSpherical = null;
+        this.animTargetCenter = null;
+      }
+    } else {
+      this.spherical.theta += this.sphericalDelta.theta;
+      this.spherical.phi += this.sphericalDelta.phi;
+      this.target.add(this.panOffset);
+    }
 
     // 限制極角避免翻轉
     const EPS = 0.001;
     this.spherical.phi = Math.max(EPS, Math.min(Math.PI - EPS, this.spherical.phi));
     this.spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this.spherical.radius));
-
-    this.target.add(this.panOffset);
 
     const offset = new THREE.Vector3().setFromSpherical(this.spherical);
     this.camera.position.copy(this.target).add(offset);

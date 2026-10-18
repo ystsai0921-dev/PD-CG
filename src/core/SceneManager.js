@@ -94,11 +94,25 @@ export class SceneManager {
   }
 
   clearSelectionHighlight() {
+    const hadConstellationHighlight =
+      this.currentScale === 'celestial' &&
+      this.celestialModel &&
+      this.celestialModel.activeHighlight &&
+      this.celestialModel.activeHighlight.type === 'Constellation';
+
     if (this.celestialModel) {
       this.celestialModel.clearHighlight();
     }
     if (this.callbacks.onClearSelection) {
       this.callbacks.onClearSelection();
+    }
+
+    // 若原本因點選星座而處於適度 Zoom-in 狀態，按 Esc 時平滑退回全天球視野距離
+    if (hadConstellationHighlight) {
+      const currentDir = new THREE.Vector3()
+        .subVectors(this.camera.position, this.controls.target)
+        .normalize();
+      this.controls.lookAtDirectionSmooth(currentDir, 225, new THREE.Vector3(0, 0, 0));
     }
   }
 
@@ -153,6 +167,21 @@ export class SceneManager {
   }
 
   _handleObjectSelect(info) {
+    // L1 點擊到星座名時，平滑轉向該星群並適度 Zoom-in，以能清楚辨析各恆星與名字標籤
+    if (
+      this.currentScale === 'celestial' &&
+      info &&
+      info.type === 'Constellation' &&
+      info.direction
+    ) {
+      const worldDir = info.direction.clone().applyQuaternion(this.celestialModel.group.quaternion);
+      this.controls.lookAtDirectionSmooth(
+        worldDir,
+        info.zoomDistance || 156,
+        new THREE.Vector3(0, 0, 0)
+      );
+    }
+
     if (this.callbacks.onSelectObject) {
       this.callbacks.onSelectObject(info);
     }
@@ -255,14 +284,8 @@ export class SceneManager {
     if (this.currentScale !== 'celestial') {
       this.setScale('celestial');
     }
-    const found = ZODIAC_CONSTELLATIONS.find((c) => c.id === constellationId);
-    if (found && found.centerDirection) {
-      // 將相機移至從地球往該星座延伸的外側位置，正面觀看該黃道星座與中心地球（並考慮天頂軸旋轉後的姿態）
-      const worldDir = found.centerDirection.clone().applyQuaternion(this.celestialModel.group.quaternion);
-      this.controls.lookAtDirection(worldDir, 210);
-      // 同步觸發該星座所有恆星閃爍高亮並顯現各顆星名字與星等
-      this.celestialModel.selectConstellation(constellationId);
-    }
+    // 觸發該星座所有恆星閃爍高亮、顯現各顆星名字與星等，並平滑轉向與適度 Zoom-in 聚焦該星群
+    this.celestialModel.selectConstellation(constellationId);
   }
 
   updateEphemeris(ephemeris) {
