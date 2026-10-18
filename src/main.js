@@ -184,9 +184,9 @@ function renderSelectionInfo(info) {
   if (!info) return;
   const lines = info.details ? info.details.replace(/\n/g, '<br/>') : '';
   els.selectionDetails.innerHTML = `
-    <div style="font-weight:700; color:#fde68a; margin-bottom:2px;">${info.title}</div>
-    <div style="font-size:11px; color:#7dd3fc; margin-bottom:4px;">${info.subtitle || ''}</div>
-    <div>${lines}</div>
+    <div class="sel-title">${info.title}</div>
+    <div class="sel-sub">${info.subtitle || ''}</div>
+    <div class="sel-body">${lines}</div>
   `;
 }
 

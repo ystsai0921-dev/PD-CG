@@ -12,12 +12,19 @@
   --sidebar-width: 22%;
   --sidebar-min: 290px;
   --sidebar-max: 380px;
+
+  /* 全站統一明體 (Mingti / Songti Serif) 與三階字級規範：標題、副標題、內容 */
+  --font-ming: "Songti TC", "STSong", "LiSong Pro", "PMingLiU", "MingLiU", "Noto Serif TC", "Source Han Serif TC", serif;
+  --fs-title: 18px;     /* 1. 標題字級 */
+  --fs-subtitle: 14px;  /* 2. 副標題字級 */
+  --fs-content: 12px;   /* 3. 內容字級 */
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: var(--font-ming);
 }
 
 html, body {
@@ -26,9 +33,14 @@ html, body {
   overflow: hidden;
   background-color: var(--bg-dark);
   color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
-  font-size: 13px;
+  font-family: var(--font-ming);
+  font-size: var(--fs-content);
   user-select: none;
+}
+
+button, input, select, textarea {
+  font-family: var(--font-ming);
+  font-size: var(--fs-content);
 }
 
 #app {
@@ -90,31 +102,31 @@ html, body {
 
 .brand-icon {
   color: var(--accent-gold);
-  font-size: 18px;
+  font-size: var(--fs-title);
   text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
 }
 
 .panel-header h1 {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .panel-header h1 small,
 .panel-header h2 small {
-  font-size: 11px;
+  font-size: var(--fs-content);
   color: var(--text-muted);
   font-weight: 400;
   margin-left: 4px;
 }
 
 .panel-header h2 {
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
 }
 
 .badge {
-  font-size: 11px;
+  font-size: var(--fs-content);
   padding: 2px 8px;
   border-radius: 99px;
   background: rgba(56, 189, 248, 0.16);
@@ -137,10 +149,10 @@ html, body {
 }
 
 .group-label {
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
   color: #93c5fd;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
 }
 
 /* 三大尺度按鈕 */
@@ -176,23 +188,23 @@ html, body {
 }
 
 .scale-num {
-  font-size: 10px;
+  font-size: var(--fs-content);
   font-weight: 700;
   color: var(--accent-gold);
   margin-bottom: 1px;
 }
 
 .scale-name {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .scale-name small {
-  font-size: 9.5px;
+  font-size: var(--fs-content);
   color: var(--text-muted);
   font-weight: 400;
 }
@@ -208,7 +220,7 @@ input[type="time"] {
   border: 1px solid var(--border-subtle);
   border-radius: 5px;
   color: var(--text-main);
-  font-size: 12px;
+  font-size: var(--fs-content);
   outline: none;
   color-scheme: dark;
 }
@@ -231,12 +243,12 @@ input:focus {
 }
 
 .field-caption {
-  font-size: 10.5px;
+  font-size: var(--fs-content);
   color: var(--text-muted);
 }
 
 .lunar-note {
-  font-size: 11px;
+  font-size: var(--fs-content);
   color: #fde68a;
   margin-top: 2px;
   letter-spacing: 0.2px;
@@ -244,7 +256,7 @@ input:focus {
 
 .mini-btn {
   padding: 2px 7px;
-  font-size: 11px;
+  font-size: var(--fs-content);
   background: rgba(56, 189, 248, 0.15);
   color: var(--accent-blue);
   border: 1px solid rgba(56, 189, 248, 0.35);
@@ -274,7 +286,7 @@ input:focus {
 }
 
 .slider-time-badge {
-  font-size: 11px;
+  font-size: var(--fs-content);
   font-weight: 700;
   color: #fde68a;
   font-variant-numeric: tabular-nums;
@@ -290,7 +302,7 @@ input:focus {
 .slider-ticks {
   display: flex;
   justify-content: space-between;
-  font-size: 9.5px;
+  font-size: var(--fs-content);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -307,7 +319,7 @@ input:focus {
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.45);
   border-radius: 5px;
-  font-size: 12px;
+  font-size: var(--fs-content);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -334,7 +346,7 @@ input:focus {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: var(--fs-content);
   color: var(--text-main);
   cursor: pointer;
 }
@@ -367,20 +379,21 @@ input:focus {
 }
 
 .info-title {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
+  color: #93c5fd;
   margin-bottom: 3px;
 }
 
 .info-value-large {
-  font-size: 15px;
+  font-size: var(--fs-title);
   font-weight: 700;
   color: #fde68a;
   margin-bottom: 2px;
 }
 
 .info-sub {
-  font-size: 11px;
+  font-size: var(--fs-content);
   color: #cbd5e1;
 }
 
@@ -401,20 +414,37 @@ input:focus {
 }
 
 .info-label {
-  font-size: 10.5px;
+  font-size: var(--fs-content);
   color: var(--text-muted);
 }
 
 .info-val {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs-content);
+  font-weight: 700;
   color: #f8fafc;
 }
 
 .selection-details {
-  font-size: 11.5px;
-  line-height: 1.45;
+  font-size: var(--fs-content);
+  line-height: 1.5;
   color: #cbd5e1;
+}
+
+.sel-title {
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
+  color: #fde68a;
+  margin-bottom: 2px;
+}
+
+.sel-sub {
+  font-size: var(--fs-content);
+  color: #7dd3fc;
+  margin-bottom: 4px;
+}
+
+.sel-body {
+  font-size: var(--fs-content);
 }
 
 .version-footer {
@@ -424,7 +454,7 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--fs-content);
   color: var(--text-muted);
 }
 
@@ -435,11 +465,11 @@ input:focus {
   border: 1px solid rgba(245, 158, 11, 0.4);
   color: #fde68a;
   font-weight: 700;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-content);
 }
 
 .version-repo {
-  font-size: 10.5px;
+  font-size: var(--fs-content);
   color: #64748b;
 }
 
@@ -485,13 +515,14 @@ input:focus {
 }
 
 .toolbar-caption {
-  font-size: 11.5px;
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
   color: var(--text-muted);
 }
 
 .mode-btn {
   padding: 5px 11px;
-  font-size: 12px;
+  font-size: var(--fs-content);
   font-weight: 600;
   color: var(--text-main);
   background: rgba(30, 41, 59, 0.85);
@@ -523,7 +554,7 @@ input:focus {
   padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid var(--border-subtle);
-  font-size: 11.5px;
+  font-size: var(--fs-content);
   color: var(--text-muted);
   backdrop-filter: blur(8px);
   pointer-events: auto;
@@ -552,8 +583,8 @@ input:focus {
 }
 
 .quickbar-label {
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: var(--fs-subtitle);
+  font-weight: 700;
   color: var(--accent-gold);
   white-space: nowrap;
 }
@@ -566,7 +597,7 @@ input:focus {
 
 .zodiac-pill {
   padding: 3px 8px;
-  font-size: 11.5px;
+  font-size: var(--fs-content);
   background: rgba(30, 41, 59, 0.75);
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 99px;
@@ -586,7 +617,7 @@ input:focus {
 /* 3D HTML 標籤樣式 */
 .celestial-label {
   color: #e2e8f0;
-  font-size: 11px;
+  font-size: var(--fs-content);
   padding: 2px 6px;
   border-radius: 4px;
   background: rgba(7, 11, 20, 0.72);
@@ -608,7 +639,7 @@ input:focus {
   color: #fef08a;
   background: rgba(45, 28, 6, 0.82);
   border: 1px solid rgba(245, 158, 11, 0.55);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .celestial-label.zodiac-label small,
@@ -616,14 +647,14 @@ input:focus {
   color: #cbd5e1;
   font-weight: 400;
   margin-left: 3px;
-  font-size: 10px;
+  font-size: var(--fs-content);
 }
 
 .celestial-label.planet-label {
   color: #7dd3fc;
   background: rgba(12, 32, 54, 0.85);
   border: 1px solid rgba(56, 189, 248, 0.55);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .celestial-label.cardinal-label {
@@ -631,5 +662,5 @@ input:focus {
   background: rgba(40, 12, 18, 0.85);
   border: 1px solid rgba(248, 113, 113, 0.55);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--fs-subtitle);
 }
