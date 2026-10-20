@@ -1181,7 +1181,7 @@ export class CelestialGlobeModel {
     // 2. 更新觀測者地平面切面方向 (當地天頂 Zenith 的赤經 = LST, 赤緯 = Lat)，並使天頂旋轉軸預設朝向世界座標 +Y，正北 True North 朝向 -Z
     this.zenithVec.copy(raDecToVector3(ephemeris.lstHours, ephemeris.lat, 1).normalize());
     this.zenithToWorldUpQuat.copy(getEquatorialToHorizontalQuaternion(ephemeris.lstHours, ephemeris.lat));
-    this.horizonGroup.quaternion.identity();
+    this.horizonGroup.quaternion.copy(this.zenithToWorldUpQuat).invert();
     this._applyGroupZenithOrientation();
 
     // 2b. 根據太陽是否位於觀測者地平面以上 (sun.altitude >= 0)，動態切換地平面上下半球的天球晝夜顏色：

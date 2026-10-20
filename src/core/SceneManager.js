@@ -296,8 +296,8 @@ export class SceneManager {
     if (this.currentScale !== 'celestial') {
       this.setScale('celestial');
     }
-    // 切換至「俯視地平面」時重置天頂軸旋轉角，鎖定正北朝向螢幕正上方
-    if (viewMode === 'horizon-top' && this.celestialModel) {
+    // 切換 L1 視角時重置天頂軸旋轉角，確保視角基線嚴格一致
+    if (this.celestialModel) {
       this.celestialModel.resetZenithRotation();
     }
     const pose = this._getCelestialPose(viewMode);
@@ -317,10 +317,10 @@ export class SceneManager {
         target: new THREE.Vector3(0, 0, 0)
       };
     }
-    // 天頂軸朝上：從側面正視天球儀，天頂旋轉軸 (+Y) 筆直朝向螢幕正上方，地平圈水平橫貫中央，畫面尺寸縮小 10%
+    // 天頂軸朝上：從側面水平正視天球儀，天頂旋轉軸 (+Y) 筆直朝向螢幕正上方，地平圈水平橫貫中央，畫面尺寸縮小 10%
     return {
-      position: new THREE.Vector3(0, 40, 295),
-      target: new THREE.Vector3(0, 8, 0)
+      position: new THREE.Vector3(0, 0, 295),
+      target: new THREE.Vector3(0, 0, 0)
     };
   }
 
