@@ -59,6 +59,7 @@ const els = {
   btnModePan: document.getElementById('btn-mode-pan'),
   btnResetCam: document.getElementById('btn-reset-cam'),
   toolbarHint: document.getElementById('toolbar-hint'),
+  quickbarLabel: document.getElementById('quickbar-label'),
   zodiacQuickbar: document.getElementById('zodiac-quickbar'),
   zodiacPills: document.getElementById('zodiac-pills')
 };
@@ -68,12 +69,13 @@ const sceneManager = new SceneManager(els.canvasContainer, {
   onControlModeChange: (mode) => updateControlModeUI(mode),
   onSelectObject: (info) => renderSelectionInfo(info),
   onClearSelection: () => {
-    document.querySelectorAll('.zodiac-pill').forEach((p) => p.classList.remove('active'));
+    document.querySelectorAll('.zodiac-pill, .planet-pill').forEach((p) => p.classList.remove('active'));
     els.selectionDetails.innerHTML =
       '尚未選取特定天體。左鍵點擊畫面中的星座名、恆星或行星即可閃爍高亮並檢視詳細資訊（按 <b>Esc</b> 退出高亮狀態）。';
   },
   onSolarTargetChange: (bodyId) => {
     els.selectSolarTarget.value = bodyId;
+    updateQuickbarActivePill(bodyId);
   }
 });
 
@@ -101,26 +103,73 @@ function setSkyScreenMode(active) {
   }
 }
 
-// 建立底部黃道十二宮快速導覽按鈕
-function initZodiacQuickbar() {
-  ZODIAC_CONSTELLATIONS.forEach((sign) => {
-    const btn = document.createElement('button');
-    btn.className = 'zodiac-pill';
-    btn.dataset.id = sign.id;
-    btn.textContent = `${sign.symbol} ${sign.nameZh} ${sign.nameEn}`;
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.zodiac-pill').forEach((p) => p.classList.remove('active'));
-      btn.classList.add('active');
-      if (state.skyScreenActive) {
-        setSkyScreenMode(false);
-      }
-      if (state.scale !== 'celestial') {
-        switchScale('celestial');
-      }
-      sceneManager.focusZodiacConstellation(sign.id);
-    });
-    els.zodiacPills.appendChild(btn);
+// L2 八大行星（含太陽中心）快速導覽配置
+const SOLAR_PLANETS = [
+  { id: 'Sun', nameZh: '太陽', nameEn: 'Sun', symbol: '☀' },
+  { id: 'Mercury', nameZh: '水星', nameEn: 'Mercury', symbol: '☿' },
+  { id: 'Venus', nameZh: '金星', nameEn: 'Venus', symbol: '♀' },
+  { id: 'Earth', nameZh: '地球', nameEn: 'Earth', symbol: '🌍' },
+  { id: 'Mars', nameZh: '火星', nameEn: 'Mars', symbol: '♂' },
+  { id: 'Jupiter', nameZh: '木星', nameEn: 'Jupiter', symbol: '♃' },
+  { id: 'Saturn', nameZh: '土星', nameEn: 'Saturn', symbol: '♄' },
+  { id: 'Uranus', nameZh: '天王星', nameEn: 'Uranus', symbol: '♅' },
+  { id: 'Neptune', nameZh: '海王星', nameEn: 'Neptune', symbol: '♆' }
+];
+
+function updateQuickbarActivePill(id) {
+  document.querySelectorAll('.zodiac-pill, .planet-pill').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.id === id);
   });
+}
+
+// 建立或更新底部快速導覽按鈕 (L1: 黃道十二宮, L2: 八大行星)
+function updateQuickbarPills(scaleName) {
+  if (!els.zodiacPills) return;
+  els.zodiacPills.innerHTML = '';
+
+  if (scaleName === 'celestial') {
+    if (els.quickbarLabel) els.quickbarLabel.textContent = '黃道十二宮：';
+    ZODIAC_CONSTELLATIONS.forEach((sign) => {
+      const btn = document.createElement('button');
+      btn.className = 'zodiac-pill';
+      btn.dataset.id = sign.id;
+      btn.textContent = `${sign.symbol} ${sign.nameZh} ${sign.nameEn}`;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.zodiac-pill, .planet-pill').forEach((p) => p.classList.remove('active'));
+        btn.classList.add('active');
+        if (state.skyScreenActive) {
+          setSkyScreenMode(false);
+        }
+        if (state.scale !== 'celestial') {
+          switchScale('celestial');
+        }
+        sceneManager.focusZodiacConstellation(sign.id);
+      });
+      els.zodiacPills.appendChild(btn);
+    });
+  } else if (scaleName === 'solar') {
+    if (els.quickbarLabel) els.quickbarLabel.textContent = '八大行星：';
+    SOLAR_PLANETS.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.className = 'planet-pill';
+      btn.dataset.id = p.id;
+      btn.textContent = `${p.symbol} ${p.nameZh} ${p.nameEn}`;
+      if (sceneManager.solarTargetId === p.id) {
+        btn.classList.add('active');
+      }
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.zodiac-pill, .planet-pill').forEach((el) => el.classList.remove('active'));
+        btn.classList.add('active');
+        els.selectSolarTarget.value = p.id;
+        sceneManager.setSolarTarget(p.id);
+        const item = sceneManager.solarModel.bodyMap[p.id];
+        if (item && item.mesh && item.mesh.userData) {
+          renderSelectionInfo(item.mesh.userData);
+        }
+      });
+      els.zodiacPills.appendChild(btn);
+    });
+  }
 }
 
 // 將公曆 Date 轉為繁體中文農曆字串（例如：農曆丙午年 九月初八）
@@ -199,6 +248,7 @@ function switchScale(scaleName) {
   els.controlsSolar.classList.toggle('hidden', scaleName !== 'solar');
   els.controlsHorizon.classList.toggle('hidden', scaleName !== 'horizon');
   els.zodiacQuickbar.classList.toggle('hidden', scaleName === 'horizon');
+  updateQuickbarPills(scaleName);
 
   const badgeMap = {
     celestial: 'L1 天球儀',
@@ -346,6 +396,7 @@ function bindUIEvents() {
   // L2 太陽系視點切換與圖層
   els.selectSolarTarget.addEventListener('change', (e) => {
     sceneManager.setSolarTarget(e.target.value);
+    updateQuickbarActivePill(e.target.value);
   });
   document.getElementById('chk-orbits').addEventListener('change', (e) => {
     sceneManager.solarModel.setOptions({ orbits: e.target.checked });
@@ -409,7 +460,7 @@ async function syncAppVersionTag() {
 
 // 啟動系統
 syncAppVersionTag();
-initZodiacQuickbar();
+updateQuickbarPills(state.scale || 'celestial');
 syncDateInputsFromState();
 bindUIEvents();
 refreshAstronomy();

@@ -703,6 +703,26 @@ input:focus {
   transform: translateY(-1px);
 }
 
+.planet-pill {
+  padding: 3px 9px;
+  font-size: var(--fs-content);
+  background: rgba(12, 32, 54, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 99px;
+  color: #7dd3fc;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.planet-pill:hover,
+.planet-pill.active {
+  background: rgba(56, 189, 248, 0.3);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 /* 3D HTML 標籤樣式 */
 .celestial-label {
   color: #e2e8f0;

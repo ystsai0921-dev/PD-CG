@@ -515,19 +515,6 @@ export class SolarSystemModel {
       new THREE.LineBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.85 })
     );
     earthSystemGroup.add(arcLine);
-
-    // 8. 地球自轉軸與自轉方向 3D 標籤 (綁定於北極箭頭尖端上方)
-    const axisDiv = document.createElement('div');
-    axisDiv.className = 'celestial-label zodiac-label solar-body-label';
-    axisDiv.innerHTML = `🧭 地軸北極 N ↺ <small>傾角 23.44° ｜ 由西向東自轉</small>`;
-    axisDiv.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (this.onSelectBody) this.onSelectBody(null, shaftMesh.userData);
-    });
-    const axisLabel = new CSS2DObject(axisDiv);
-    axisLabel.position.set(0, axisHalfLen + 1.25, 0);
-    earthTiltGroup.add(axisLabel);
-    this.labels.push(axisLabel);
   }
 
   /**
