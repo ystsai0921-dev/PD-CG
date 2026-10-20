@@ -243,11 +243,11 @@ export class SceneManager {
         600
       );
     } else if (this.currentScale === 'solar') {
-      // L2 太陽系預設視角：聚焦於當前選定的太陽/行星/衛星視點
+      // L2 太陽系預設視角：俯視黃道面，完整納入各大行星軌道與黃道
       const targetPos = this.solarModel.getTargetPosition(this.solarTargetId);
       const offset = this.solarTargetId === 'Sun'
-        ? new THREE.Vector3(0, 95, 145)
-        : new THREE.Vector3(0, 14, 24);
+        ? new THREE.Vector3(0, 270, 0.27)
+        : new THREE.Vector3(0, 26, 0.026);
       this.controls.setCameraPose(
         targetPos.clone().add(offset),
         targetPos,
@@ -269,7 +269,7 @@ export class SceneManager {
     this.solarTargetId = bodyId;
     if (this.currentScale === 'solar') {
       const targetPos = this.solarModel.getTargetPosition(bodyId);
-      const dist = bodyId === 'Sun' ? 140 : 22;
+      const dist = bodyId === 'Sun' ? 270 : 26;
       const dir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).normalize();
       this.controls.setCameraPose(
         targetPos.clone().addScaledVector(dir, dist),
