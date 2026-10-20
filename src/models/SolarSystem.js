@@ -313,7 +313,9 @@ export class SolarSystemModel {
 
       const label = this._createLabel(
         `${cfg.symbol} ${cfg.nameZh} <small>${cfg.nameEn}</small>`,
-        cfg.isStar ? 'celestial-label zodiac-label' : 'celestial-label planet-label',
+        cfg.isStar
+          ? 'celestial-label zodiac-label solar-body-label'
+          : 'celestial-label planet-label solar-body-label',
         () => {
           if (this.onSelectBody) this.onSelectBody(cfg.id, mesh.userData);
         }
@@ -377,7 +379,7 @@ export class SolarSystemModel {
 
       const label = this._createLabel(
         `${mCfg.symbol} ${mCfg.nameZh} <small>${mCfg.nameEn}</small>`,
-        'celestial-label',
+        'celestial-label satellite-label solar-body-label',
         () => {
           if (this.onSelectBody) this.onSelectBody(mCfg.id, mesh.userData);
         }
@@ -516,7 +518,7 @@ export class SolarSystemModel {
 
     // 8. 地球自轉軸與自轉方向 3D 標籤 (綁定於北極箭頭尖端上方)
     const axisDiv = document.createElement('div');
-    axisDiv.className = 'celestial-label zodiac-label';
+    axisDiv.className = 'celestial-label zodiac-label solar-body-label';
     axisDiv.innerHTML = `🧭 地軸北極 N ↺ <small>傾角 23.44° ｜ 由西向東自轉</small>`;
     axisDiv.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -619,14 +621,15 @@ export class SolarSystemModel {
       this.orbitsGroup.add(periMesh);
 
       const periDiv = document.createElement('div');
-      periDiv.className = 'celestial-label zodiac-label';
+      periDiv.className = 'celestial-label zodiac-label solar-body-label';
       periDiv.innerHTML = '🔥 近日點 Perihelion <small>0.983 AU (約1/4)</small>';
       periDiv.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this.onSelectBody) this.onSelectBody(null, periInfo);
       });
       const periLabel = new CSS2DObject(periDiv);
-      periLabel.position.copy(periPos.clone().add(new THREE.Vector3(0, -1.9, 0)));
+      const periDir = periPos.clone().normalize();
+      periLabel.position.copy(periPos.clone().addScaledVector(periDir, 2.5).add(new THREE.Vector3(0, 0.8, 0)));
       this.orbitsGroup.add(periLabel);
       this.labels.push(periLabel);
       this.orbitLabels.push(periLabel);
@@ -649,14 +652,15 @@ export class SolarSystemModel {
       this.orbitsGroup.add(aphMesh);
 
       const aphDiv = document.createElement('div');
-      aphDiv.className = 'celestial-label planet-label';
+      aphDiv.className = 'celestial-label planet-label solar-body-label';
       aphDiv.innerHTML = '❄️ 遠日點 Aphelion <small>1.017 AU (約7/4)</small>';
       aphDiv.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this.onSelectBody) this.onSelectBody(null, aphInfo);
       });
       const aphLabel = new CSS2DObject(aphDiv);
-      aphLabel.position.copy(aphPos.clone().add(new THREE.Vector3(0, -1.9, 0)));
+      const aphDir = aphPos.clone().normalize();
+      aphLabel.position.copy(aphPos.clone().addScaledVector(aphDir, 2.5).add(new THREE.Vector3(0, 0.8, 0)));
       this.orbitsGroup.add(aphLabel);
       this.labels.push(aphLabel);
       this.orbitLabels.push(aphLabel);
@@ -771,7 +775,8 @@ export class SolarSystemModel {
       if (cfg.id === 'Sun') {
         entry.mesh.position.set(0, 0, 0);
         entry.worldPos.set(0, 0, 0);
-        entry.label.position.set(0, cfg.radius + 2.2, 0);
+        // 太陽標籤放置於球體周圍 (-Z 方向上方與微幅 +Y)，在俯視黃道面與傾角下均不擋住太陽球體
+        entry.label.position.set(0, cfg.radius + 1.2, -(cfg.radius + 3.8));
         entry.mesh.userData = {
           type: 'SolarBody',
           bodyId: 'Sun',
@@ -810,7 +815,11 @@ export class SolarSystemModel {
       }
 
       entry.worldPos.set(x, y, z);
-      entry.label.position.set(x, y + cfg.radius + 1.8, z);
+      // 行星標籤標示在球體周圍 (-Z 方向上方與微幅 +Y)，在俯視黃道面與任意視角下均不擋住球體與土星光環
+      const visualRadius = cfg.hasRing ? 5.2 : cfg.radius;
+      const zOffset = -(visualRadius + 3.0);
+      const yOffset = cfg.radius + 1.2;
+      entry.label.position.set(x, y + yOffset, z + zOffset);
 
       entry.mesh.userData = {
         type: 'SolarBody',
@@ -846,7 +855,15 @@ export class SolarSystemModel {
 
       entry.mesh.position.set(px, py, pz);
       entry.worldPos.set(px, py, pz);
-      entry.label.position.set(px, py + mCfg.radius + 1.2, pz);
+
+      // 衛星標籤標示於衛星外側周圍（朝遠離母行星方向延伸），避免遮擋衛星本體與母行星
+      const mDx = px - parentEntry.worldPos.x;
+      const mDz = pz - parentEntry.worldPos.z;
+      const mDist = Math.sqrt(mDx * mDx + mDz * mDz) || 1;
+      const mUx = mDx / mDist;
+      const mUz = mDz / mDist;
+      const mOffset = mCfg.radius + 1.6;
+      entry.label.position.set(px + mUx * mOffset, py + mCfg.radius + 0.8, pz + mUz * mOffset);
 
       // 若為月球，將月球正面 (+Z 軸：風暴洋、雨海、澄海、靜海、危海) 永遠潮汐鎖定朝向地球中心
       if (mCfg.id === 'Moon') {

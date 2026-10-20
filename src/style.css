@@ -746,6 +746,26 @@ input:focus {
   font-weight: 700;
 }
 
+/* L2 太陽系天體標籤：縮小一級字級 (10.5px，英文小字 9px)，精緻小巧且於天體周圍不遮擋球體 */
+.celestial-label.solar-body-label {
+  font-size: 10.5px;
+  padding: 1.5px 5.5px;
+  line-height: 1.25;
+  letter-spacing: 0.25px;
+}
+
+.celestial-label.solar-body-label small {
+  font-size: 9px;
+  margin-left: 2px;
+  opacity: 0.88;
+}
+
+.celestial-label.satellite-label {
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
 .celestial-label.cardinal-label {
   color: #fca5a5;
   background: rgba(40, 12, 18, 0.85);
