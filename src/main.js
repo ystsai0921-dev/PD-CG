@@ -1,7 +1,7 @@
-import { SceneManager } from './core/SceneManager.js';
-import { SkyScreenView } from './models/SkyScreenView.js';
-import { computeEphemeris, formatRA } from './utils/astronomy.js';
-import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js';
+import { SceneManager } from './core/SceneManager.js?v=20261020_07';
+import { SkyScreenView } from './models/SkyScreenView.js?v=20261020_07';
+import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261020_07';
+import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261020_07';
 
 // 應用程式全域狀態
 const state = {

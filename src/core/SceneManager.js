@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { CustomController } from './Controls.js';
-import { CelestialGlobeModel } from '../models/CelestialGlobe.js';
-import { SolarSystemModel } from '../models/SolarSystem.js';
-import { HorizonModel } from '../models/HorizonModel.js';
-import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js';
+import { CustomController } from './Controls.js?v=20261020_07';
+import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261020_07';
+import { SolarSystemModel } from '../models/SolarSystem.js?v=20261020_07';
+import { HorizonModel } from '../models/HorizonModel.js?v=20261020_07';
+import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261020_07';
 
 export class SceneManager {
   constructor(container, callbacks) {
@@ -271,11 +271,12 @@ export class SceneManager {
         this._handleObjectSelect(sunItem.mesh.userData);
       }
     } else if (this.currentScale === 'horizon') {
-      // L3 地平日月模型預設視角：從地平圈東南側俯視觀測平台與日月升落弧線
+      // L3 地平日月模型預設視角：以觀測平臺中心偏低視角 (0, 2.0, 0) 為 target，
+      // 確保放大 (Zoom In) 時鏡頭聚焦於地基與日影，絕不飛向天空而丟失地面國旗陰影
       this.controls.setCameraPose(
-        new THREE.Vector3(95, 65, 115),
-        new THREE.Vector3(0, 10, 0),
-        5,
+        new THREE.Vector3(45, 28, 55),
+        new THREE.Vector3(0, 2.0, 0),
+        1.5,
         450
       );
     }
