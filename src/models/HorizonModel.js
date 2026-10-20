@@ -41,15 +41,13 @@ export class HorizonModel {
   }
 
   _buildGroundCompass() {
-    // 地面石質日晷觀測平臺 (沉穩高對比青灰花崗石紋，使旗杆日影輪廓深邃、反差鮮明逼真)
+    // 地面石質日晷觀測平臺 (沉穩高對比青灰花崗石紋，使旗杆與國旗日影輪廓深邃、反差鮮明逼真)
     const groundGeo = new THREE.CircleGeometry(DOME_RADIUS, 96);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x243343,
       roughness: 0.85,
       metalness: 0.1,
-      transparent: true,
-      opacity: 0.96,
       side: THREE.DoubleSide
     });
     this.groundGroup.add(new THREE.Mesh(groundGeo, groundMat));
@@ -253,12 +251,16 @@ export class HorizonModel {
     });
     this.gnomonGroup.add(new THREE.Mesh(finialGeo, finialMat));
 
+    // 國旗專屬動態風向旋轉群組 (隨風向圍繞旗杆中心 (0,y,0) 旋轉，永保迎光舒展，不與日光共面，使國旗陰影完整舒展)
+    this.flagGroup = new THREE.Group();
+    this.gnomonGroup.add(this.flagGroup);
+
     // 飄揚的中華民國國旗網格 (細分 24x12 頂點，以便即時計算隨風波浪飄動與地面真實幾何投影)
     this.flagSegX = 24;
     this.flagSegY = 12;
     const flagGeo = new THREE.PlaneGeometry(this.flagWidth, this.flagHeight, this.flagSegX, this.flagSegY);
-    // 將國旗左緣 (x = 0) 對齊旗杆頂端下方
-    flagGeo.translate(this.flagWidth / 2 + 0.12, this.poleHeight - this.flagHeight / 2 - 0.1, 0);
+    // 將國旗左緣 (x = 0) 對齊旗杆外徑 (x = 0.16)，垂直對齊旗杆頂端下方
+    flagGeo.translate(this.flagWidth / 2 + 0.16, this.poleHeight - this.flagHeight / 2 - 0.1, 0);
 
     // 備份未受風波動的原始頂點座標
     this.flagBasePositions = new Float32Array(flagGeo.attributes.position.array);
@@ -274,7 +276,7 @@ export class HorizonModel {
       emissiveIntensity: 0.22
     });
     this.flagMesh = new THREE.Mesh(flagGeo, flagMat);
-    this.gnomonGroup.add(this.flagMesh);
+    this.flagGroup.add(this.flagMesh);
 
     // === 地面真實雙層光學幾何投影日影 (深邃本影 Umbra + 柔和半影 Penumbra) ===
     const groundY = 0.06;
@@ -283,7 +285,7 @@ export class HorizonModel {
     const umbraMat = new THREE.MeshBasicMaterial({
       color: 0x010306,
       transparent: true,
-      opacity: 0.90,
+      opacity: 0.92,
       side: THREE.DoubleSide,
       depthWrite: false
     });
@@ -303,12 +305,14 @@ export class HorizonModel {
     this.baseShadowGeo.setAttribute('position', new THREE.BufferAttribute(baseShadowVerts, 3));
     this.baseShadowGeo.setIndex([0, 1, 2, 2, 1, 3]);
     this.baseShadowMesh = new THREE.Mesh(this.baseShadowGeo, umbraMat);
+    this.baseShadowMesh.renderOrder = 10;
     this.gnomonGroup.add(this.baseShadowMesh);
 
     this.baseCapShadowMesh = new THREE.Mesh(
       new THREE.CircleGeometry(0.95, 24).rotateX(-Math.PI / 2),
       umbraMat
     );
+    this.baseCapShadowMesh.renderOrder = 10;
     this.gnomonGroup.add(this.baseCapShadowMesh);
 
     // (B) 旗杆在地面上的幾何投影帶 (Pole Core Umbra Quad)
@@ -317,6 +321,7 @@ export class HorizonModel {
     this.poleShadowGeo.setAttribute('position', new THREE.BufferAttribute(poleShadowVerts, 3));
     this.poleShadowGeo.setIndex([0, 1, 2, 2, 1, 3]);
     this.poleShadowMesh = new THREE.Mesh(this.poleShadowGeo, umbraMat);
+    this.poleShadowMesh.renderOrder = 10;
     this.gnomonGroup.add(this.poleShadowMesh);
 
     // 旗杆半影柔邊外緣 (Pole Penumbra Fringe)
@@ -325,6 +330,7 @@ export class HorizonModel {
     this.polePenumbraGeo.setAttribute('position', new THREE.BufferAttribute(polePenumbraVerts, 3));
     this.polePenumbraGeo.setIndex([0, 1, 2, 2, 1, 3]);
     this.polePenumbraMesh = new THREE.Mesh(this.polePenumbraGeo, penumbraMat);
+    this.polePenumbraMesh.renderOrder = 9;
     this.gnomonGroup.add(this.polePenumbraMesh);
 
     // (C) 旗杆頂端金球投影點 (Finial Umbra + Penumbra Discs)
@@ -332,10 +338,12 @@ export class HorizonModel {
       new THREE.CircleGeometry(0.32, 20).rotateX(-Math.PI / 2),
       umbraMat
     );
+    this.finialShadowMesh.renderOrder = 10;
     this.finialPenumbraMesh = new THREE.Mesh(
       new THREE.CircleGeometry(0.52, 20).rotateX(-Math.PI / 2),
       penumbraMat
     );
+    this.finialPenumbraMesh.renderOrder = 9;
     this.gnomonGroup.add(this.finialPenumbraMesh, this.finialShadowMesh);
 
     // (D) 飄揚國旗在地面上的真實 3D 光線幾何投影網格 (Flag Core Umbra)
@@ -344,6 +352,7 @@ export class HorizonModel {
     this.flagShadowGeo.setAttribute('position', new THREE.BufferAttribute(flagShadowVerts, 3));
     this.flagShadowGeo.setIndex(flagGeo.getIndex().clone());
     this.flagShadowMesh = new THREE.Mesh(this.flagShadowGeo, umbraMat);
+    this.flagShadowMesh.renderOrder = 10;
     this.gnomonGroup.add(this.flagShadowMesh);
 
     // 國旗半影漫射外緣網格 (Flag Penumbra Fringe)
@@ -352,15 +361,10 @@ export class HorizonModel {
     this.flagPenumbraGeo.setAttribute('position', new THREE.BufferAttribute(flagPenumbraVerts, 3));
     this.flagPenumbraGeo.setIndex(flagGeo.getIndex().clone());
     this.flagPenumbraMesh = new THREE.Mesh(this.flagPenumbraGeo, penumbraMat);
+    this.flagPenumbraMesh.renderOrder = 9;
     this.gnomonGroup.add(this.flagPenumbraMesh);
 
-    // (E) 竿頂日影測量標記環與實時長度標籤 (圭表測影)
-    this.shadowTipRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.35, 0.52, 24).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.72, side: THREE.DoubleSide })
-    );
-    this.gnomonGroup.add(this.shadowTipRing);
-
+    // (E) 影端實時長度標籤 (圭表測影)
     const tipDiv = document.createElement('div');
     tipDiv.className = 'celestial-label gnomon-shadow-label';
     tipDiv.innerHTML = '🚩 影長 --m';
@@ -390,14 +394,6 @@ export class HorizonModel {
       () => this.onSelectObject && this.onSelectObject(this.sunMesh.userData)
     );
 
-    // 太陽至中心觀測點的光線視線虛線
-    const rayGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-    this.sunRayLine = new THREE.Line(
-      rayGeo,
-      new THREE.LineDashedMaterial({ color: 0xfacc15, dashSize: 2, gapSize: 1.5, transparent: true, opacity: 0.55 })
-    );
-    this.skyBodiesGroup.add(this.sunRayLine);
-
     // 月球：貼上真實月球正面月海 (風暴洋、雨海、澄海、靜海、危海) 與隕石坑凹凸陰影貼圖 (Bump Map)
     const { colorMap, bumpMap } = createMoonTextures();
     this.moonMesh = new THREE.Mesh(
@@ -423,13 +419,6 @@ export class HorizonModel {
       this.skyBodiesGroup,
       () => this.onSelectObject && this.onSelectObject(this.moonMesh.userData)
     );
-
-    const moonRayGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-    this.moonRayLine = new THREE.Line(
-      moonRayGeo,
-      new THREE.LineDashedMaterial({ color: 0x93c5fd, dashSize: 2, gapSize: 1.5, transparent: true, opacity: 0.45 })
-    );
-    this.skyBodiesGroup.add(this.moonRayLine);
 
     // 當日太陽與月球 24 小時全天軌跡線
     this.sunPathLine = new THREE.Line(
@@ -510,9 +499,6 @@ export class HorizonModel {
     // 將太陽平行光源拉遠，使天頂圓頂上的月球也能根據真實日地月相對角度受光呈現凹凸陰影與月相
     this.sunLight.position.copy(sunPos.clone().normalize().multiplyScalar(DOME_RADIUS * 6));
 
-    this.sunRayLine.geometry.setFromPoints([new THREE.Vector3(0, 0, 0), sunPos]);
-    this.sunRayLine.computeLineDistances();
-
     const sunAbove = ephemeris.sun.altitude >= 0;
     this.sunMesh.material.color.setHex(sunAbove ? 0xfacc15 : 0x9a3412);
     this.sunMesh.userData = {
@@ -540,9 +526,6 @@ export class HorizonModel {
 
     this.moonLabel.position.copy(moonPos.clone().add(new THREE.Vector3(0, 4.2, 0)));
 
-    this.moonRayLine.geometry.setFromPoints([new THREE.Vector3(0, 0, 0), moonPos]);
-    this.moonRayLine.computeLineDistances();
-
     const moonAbove = ephemeris.moon.altitude >= 0;
     this.moonMesh.userData = {
       type: 'HorizonBody',
@@ -554,36 +537,13 @@ export class HorizonModel {
 
   /**
    * 每一幀更新國旗隨風飄揚的 3D 波浪形變，並根據太陽平行光向量 S = (Sx, Sy, Sz)
-   * 將旗杆與飄揚國旗的每一個 3D 頂點 P(x, y, z) 真實幾何投影至地面平面 (y_ground = 0.08)：
-   *   P_shadow = ( x - y * (Sx / Sy), 0.08, z - y * (Sz / Sy) )
+   * 將旗座、旗杆與飄揚國旗的每一個 3D 頂點真實幾何投影至地面 (y_ground = 0.06)：
+   *   P_shadow = ( x - y * (Sx / Sy), groundY, z - y * (Sz / Sy) )
    */
   animateFlagAndShadow(timeSec) {
-    if (!this.flagMesh) return;
+    if (!this.flagMesh || !this.flagShadowMesh) return;
 
-    const posAttr = this.flagMesh.geometry.attributes.position;
-    const arr = posAttr.array;
-    const base = this.flagBasePositions;
-    const count = posAttr.count;
-
-    // 1. 更新國旗 3D 飄揚波浪頂點 (越遠離旗杆 x=0.12 振幅越大)
-    for (let i = 0; i < count; i++) {
-      const bx = base[i * 3];
-      const by = base[i * 3 + 1];
-      const bz = base[i * 3 + 2];
-
-      const distFromPole = Math.max(0, (bx - 0.12) / this.flagWidth);
-      const wave1 = Math.sin(distFromPole * 5.5 - timeSec * 4.2) * 0.32 * distFromPole;
-      const wave2 = Math.cos(distFromPole * 9.0 - timeSec * 6.5 + by * 0.8) * 0.1 * distFromPole;
-      const flutterY = Math.sin(distFromPole * 4.0 - timeSec * 3.5) * 0.07 * distFromPole;
-
-      arr[i * 3] = bx;
-      arr[i * 3 + 1] = by + flutterY;
-      arr[i * 3 + 2] = bz + wave1 + wave2;
-    }
-    posAttr.needsUpdate = true;
-    this.flagMesh.geometry.computeVertexNormals();
-
-    // 2. 計算旗杆與飄揚國旗在地面上的真實幾何投影影子 (當太陽仰角 > 0.5° 時投射)
+    // 檢查太陽是否存在且仰角 > 0.5° (地平線上方方有日影)
     if (!this.currentSunDir || this.currentSunAlt <= 0.5) {
       this.baseShadowMesh.visible = false;
       this.baseCapShadowMesh.visible = false;
@@ -593,9 +553,10 @@ export class HorizonModel {
       this.finialPenumbraMesh.visible = false;
       this.flagShadowMesh.visible = false;
       this.flagPenumbraMesh.visible = false;
-      this.shadowTipRing.visible = false;
-      this.shadowTipLabel.visible = false;
-      this.shadowTipLabel.element.style.display = 'none';
+      if (this.shadowTipLabel) {
+        this.shadowTipLabel.visible = false;
+        this.shadowTipLabel.element.style.display = 'none';
+      }
       return;
     }
 
@@ -607,18 +568,54 @@ export class HorizonModel {
     this.finialPenumbraMesh.visible = true;
     this.flagShadowMesh.visible = true;
     this.flagPenumbraMesh.visible = true;
-    this.shadowTipRing.visible = true;
-    this.shadowTipLabel.visible = true;
-    this.shadowTipLabel.element.style.display = '';
+    if (this.shadowTipLabel) {
+      this.shadowTipLabel.visible = true;
+      this.shadowTipLabel.element.style.display = '';
+    }
 
     const S = this.currentSunDir;
-    // 限制最低有效 Sy 避免日出日落極端無限遠拉伸超出圓盤過多
+    // 限制最低有效 Sy 避免日出日落極端拉伸超出圓盤過多
     const effectiveSy = Math.max(S.y, 0.08);
     const kx = S.x / effectiveSy;
     const kz = S.z / effectiveSy;
     const groundY = 0.06;
 
-    // (a) 旗座基石地面陰影 (高 0.4, 半徑 0.95)
+    // 1. 計算國旗迎風指向角 (Wind Heading Angle):
+    // 太陽在水平面的射線角度為 atan2(-S.z, S.x)。
+    // 國旗隨微風舒展在垂直於日射約 75° 的角度，使陽光充分照射旗面，
+    // 不僅 3D 空間中展現完整青天白日滿地紅，更在地面投射出大面積、舒展飄動的完整國旗日影！
+    const sunAngle = Math.atan2(-S.z, S.x);
+    // 加入隨時間微幅擺動的真實風向自然偏角 (±3°)
+    const breezeWiggle = Math.sin(timeSec * 0.8) * 0.05;
+    const windAngle = sunAngle + 1.32 + breezeWiggle;
+    if (this.flagGroup) {
+      this.flagGroup.rotation.y = windAngle;
+    }
+
+    // 2. 更新國旗 3D 飄揚波浪頂點 (隨風向舒展，越遠離旗杆 x=0.16 振幅越大)
+    const posAttr = this.flagMesh.geometry.attributes.position;
+    const arr = posAttr.array;
+    const base = this.flagBasePositions;
+    const count = posAttr.count;
+
+    for (let i = 0; i < count; i++) {
+      const bx = base[i * 3];
+      const by = base[i * 3 + 1];
+      const bz = base[i * 3 + 2];
+
+      const dist = Math.max(0, (bx - 0.16) / this.flagWidth);
+      const wave1 = Math.sin(dist * 5.8 - timeSec * 4.6) * 0.36 * dist;
+      const wave2 = Math.cos(dist * 9.5 - timeSec * 6.8 + by * 0.8) * 0.14 * dist;
+      const flutterY = Math.sin(dist * 4.2 - timeSec * 3.6) * 0.08 * dist;
+
+      arr[i * 3] = bx;
+      arr[i * 3 + 1] = by + flutterY;
+      arr[i * 3 + 2] = bz + wave1 + wave2;
+    }
+    posAttr.needsUpdate = true;
+    this.flagMesh.geometry.computeVertexNormals();
+
+    // 3. 旗座基石地面陰影 (高 0.4, 半徑 0.95)
     const baseH = 0.4;
     const bTipX = -baseH * kx;
     const bTipZ = -baseH * kz;
@@ -634,7 +631,7 @@ export class HorizonModel {
     this.baseShadowGeo.attributes.position.needsUpdate = true;
     this.baseCapShadowMesh.position.set(bTipX, groundY + 0.002, bTipZ);
 
-    // (b) 旗杆投影帶：本影核心與半影羽化
+    // 4. 旗杆投影帶：本影核心與半影羽化
     const topH = this.poleHeight + 0.18;
     const tipX = -topH * kx;
     const tipZ = -topH * kz;
@@ -644,7 +641,7 @@ export class HorizonModel {
     const nx = (-tipZ / len) * 0.16;
     const nz = (tipX / len) * 0.16;
 
-    // 本影核心頂底端 (高度微幅分離以防 z-fighting)
+    // 本影核心頂底端
     const pArr = this.poleShadowGeo.attributes.position.array;
     pArr[0] = bTipX - nx * 0.95; pArr[1] = groundY + 0.004; pArr[2] = bTipZ - nz * 0.95;
     pArr[3] = bTipX + nx * 0.95; pArr[4] = groundY + 0.004; pArr[5] = bTipZ + nz * 0.95;
@@ -652,7 +649,7 @@ export class HorizonModel {
     pArr[9] = tipX + nx * 0.8;   pArr[10] = groundY + 0.004; pArr[11] = tipZ + nz * 0.8;
     this.poleShadowGeo.attributes.position.needsUpdate = true;
 
-    // 半影羽化層 (外緣更寬且半透明)
+    // 半影羽化層
     const penW = 0.25;
     const pArrPen = this.polePenumbraGeo.attributes.position.array;
     pArrPen[0] = bTipX - nx * (0.95 + penW); pArrPen[1] = groundY + 0.002; pArrPen[2] = bTipZ - nz * (0.95 + penW);
@@ -661,18 +658,28 @@ export class HorizonModel {
     pArrPen[9] = tipX + nx * (0.8 + penW * 1.6); pArrPen[10] = groundY + 0.002; pArrPen[11] = tipZ + nz * (0.8 + penW * 1.6);
     this.polePenumbraGeo.attributes.position.needsUpdate = true;
 
-    // (c) 旗杆頂端圓球投影
+    // 5. 旗杆頂端圓球投影
     this.finialShadowMesh.position.set(tipX, groundY + 0.005, tipZ);
     this.finialPenumbraMesh.position.set(tipX, groundY + 0.002, tipZ);
 
-    // (d) 飄揚國旗每一個 3D 頂點的真實平行光幾何投影 (本影 + 半影)
+    // 6. 飄揚國旗每一個 3D 頂點的真實平行光幾何投影 (本影 + 半影)
+    // 國旗經 flagGroup.rotation.y 旋轉後的空間座標 (vx, vy, vz):
+    const cosR = Math.cos(windAngle);
+    const sinR = Math.sin(windAngle);
     const fShadowArr = this.flagShadowGeo.attributes.position.array;
     const fPenArr = this.flagPenumbraGeo.attributes.position.array;
-    for (let i = 0; i < count; i++) {
-      const vx = arr[i * 3];
-      const vy = arr[i * 3 + 1];
-      const vz = arr[i * 3 + 2];
 
+    for (let i = 0; i < count; i++) {
+      const lx = arr[i * 3];
+      const ly = arr[i * 3 + 1];
+      const lz = arr[i * 3 + 2];
+
+      // 旋轉轉換至 gnomonGroup 坐標系
+      const vx = lx * cosR + lz * sinR;
+      const vy = ly;
+      const vz = -lx * sinR + lz * cosR;
+
+      // 平行光投影至地面 (y = groundY)
       const sx = vx - vy * kx;
       const sz = vz - vy * kz;
 
@@ -680,20 +687,22 @@ export class HorizonModel {
       fShadowArr[i * 3 + 1] = groundY + 0.007;
       fShadowArr[i * 3 + 2] = sz;
 
-      // 半影微幅向外擴散 0.07
-      fPenArr[i * 3] = sx + (Math.sin(i * 1.7) * 0.07);
+      // 半影微幅向外擴散羽化 (0.09)
+      fPenArr[i * 3] = sx + Math.sin(i * 1.7) * 0.09;
       fPenArr[i * 3 + 1] = groundY + 0.003;
-      fPenArr[i * 3 + 2] = sz + (Math.cos(i * 1.7) * 0.07);
+      fPenArr[i * 3 + 2] = sz + Math.cos(i * 1.7) * 0.09;
     }
     this.flagShadowGeo.attributes.position.needsUpdate = true;
     this.flagPenumbraGeo.attributes.position.needsUpdate = true;
+    this.flagShadowGeo.computeVertexNormals();
+    this.flagShadowGeo.computeBoundingSphere();
+    this.flagPenumbraGeo.computeBoundingSphere();
 
-    // (e) 影端光學標記環與實時日影讀數標籤 (圭表測影)
-    this.shadowTipRing.position.set(tipX, groundY + 0.009, tipZ);
-    this.shadowTipLabel.position.set(tipX, groundY + 0.5, tipZ);
-
-    // 計算日影在地平坐標系中的方位角 (北=0, 東=90, 南=180, 西=270)
-    const shadowAzDeg = (Math.atan2(tipX, -tipZ) * THREE.MathUtils.RAD2DEG + 360) % 360;
-    this.shadowTipLabel.element.innerHTML = `🚩 竿影長度: <b>${shadowLen.toFixed(1)}m</b> ｜ 方位: <b>${shadowAzDeg.toFixed(0)}°</b>`;
+    // 7. 圭表測影實時影長與方位角讀數 (懸浮於影端上方)
+    if (this.shadowTipLabel) {
+      this.shadowTipLabel.position.set(tipX, groundY + 0.45, tipZ);
+      const shadowAzDeg = (Math.atan2(tipX, -tipZ) * THREE.MathUtils.RAD2DEG + 360) % 360;
+      this.shadowTipLabel.element.innerHTML = `🚩 竿影長度: <b>${shadowLen.toFixed(1)}m</b> ｜ 方位: <b>${shadowAzDeg.toFixed(0)}°</b>`;
+    }
   }
 }
