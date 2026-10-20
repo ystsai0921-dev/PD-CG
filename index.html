@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PD觀星</title>
   <link rel="icon" type="image/jpeg" href="./public/logo.jpg" />
-  <link rel="stylesheet" href="./src/style.css" />
+  <link rel="stylesheet" href="./src/style.css?v=20261020_03" />
   <!-- Import map allows running directly via static server without Node/Vite bundling, while staying 100% compatible with Vite -->
   <script type="importmap">
     {
@@ -270,14 +270,20 @@
         </div>
       </div>
 
-      <!-- 底部快速導覽列 (L1: 黃道十二宮, L2: 八大行星) -->
+      <!-- 底部快速導覽列 (L1: 黃道十二宮) -->
       <div id="zodiac-quickbar">
-        <span class="quickbar-label" id="quickbar-label">黃道十二宮：</span>
+        <span class="quickbar-label">黃道十二宮：</span>
         <div id="zodiac-pills" class="zodiac-pills"></div>
+      </div>
+
+      <!-- 底部快速導覽列 (L2: 八大行星) -->
+      <div id="planet-quickbar" class="hidden">
+        <span class="quickbar-label planet-quickbar-label">八大行星：</span>
+        <div id="planet-pills" class="zodiac-pills"></div>
       </div>
     </main>
   </div>
 
-  <script type="module" src="./src/main.js"></script>
+  <script type="module" src="./src/main.js?v=20261020_03"></script>
 </body>
 </html>

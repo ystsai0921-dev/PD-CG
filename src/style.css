@@ -653,8 +653,9 @@ input:focus {
   color: #e2e8f0;
 }
 
-/* 底部黃道十二宮導覽列 */
-#zodiac-quickbar {
+/* 底部導覽列 (L1: 黃道十二宮, L2: 八大行星) */
+#zodiac-quickbar,
+#planet-quickbar {
   position: absolute;
   bottom: 12px;
   left: 14px;
@@ -667,8 +668,14 @@ input:focus {
   border-radius: 8px;
   border: 1px solid var(--border-subtle);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 10;
   overflow-x: auto;
+}
+
+#zodiac-quickbar.hidden,
+#planet-quickbar.hidden {
+  display: none !important;
 }
 
 .quickbar-label {
@@ -676,6 +683,10 @@ input:focus {
   font-weight: 700;
   color: var(--accent-gold);
   white-space: nowrap;
+}
+
+.quickbar-label.planet-quickbar-label {
+  color: var(--accent-blue);
 }
 
 .zodiac-pills {
