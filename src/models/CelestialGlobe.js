@@ -5,13 +5,39 @@ import {
   raDecToVector3,
   eclipticToVector3,
   OBLIQUITY_RAD,
-  formatRA,
-  getEquatorialToHorizontalQuaternion
+  formatRA
 } from '../utils/astronomy.js';
 import { createEarthTextures } from '../utils/earthTexture.js';
 
 const GLOBE_RADIUS = 100;
 const EARTH_RADIUS = 6.48; // 地球模型大小縮小 10% (原 7.2 -> 6.48)
+
+/**
+ * 計算將天球赤道座標系 (Equatorial System: +Y 北天極 NCP, +X 春分點, -Z RA=6h)
+ * 旋轉至當地地平座標系 (Horizontal System: +Y 天頂 Zenith, -Z 正北 True North, +X 正東 East, +Z 正南 South, -X 正西 West)
+ * 的嚴格正交四元數旋轉變換。
+ */
+function getEquatorialToHorizontalQuaternion(lstHours, latDeg) {
+  const z_eq = raDecToVector3(lstHours, latDeg, 1).normalize();
+  const p_eq = new THREE.Vector3(0, 1, 0); // 北天極 NCP
+  const dp = p_eq.dot(z_eq);
+  const n_proj = new THREE.Vector3().subVectors(p_eq, z_eq.clone().multiplyScalar(dp));
+  let n_eq;
+  if (n_proj.lengthSq() < 1e-10) {
+    n_eq = new THREE.Vector3(0, 0, -1);
+  } else {
+    n_eq = n_proj.normalize();
+  }
+  const e_eq = new THREE.Vector3().crossVectors(n_eq, z_eq).normalize();
+
+  const m = new THREE.Matrix4().set(
+    e_eq.x, e_eq.y, e_eq.z, 0,
+    z_eq.x, z_eq.y, z_eq.z, 0,
+    -n_eq.x, -n_eq.y, -n_eq.z, 0,
+    0, 0, 0, 1
+  );
+  return new THREE.Quaternion().setFromRotationMatrix(m);
+}
 
 export class CelestialGlobeModel {
   constructor(onSelectObject) {
