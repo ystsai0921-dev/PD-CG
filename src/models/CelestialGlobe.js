@@ -5,7 +5,8 @@ import {
   raDecToVector3,
   eclipticToVector3,
   OBLIQUITY_RAD,
-  formatRA
+  formatRA,
+  getEquatorialToHorizontalQuaternion
 } from '../utils/astronomy.js';
 import { createEarthTextures } from '../utils/earthTexture.js';
 
@@ -39,6 +40,7 @@ export class CelestialGlobeModel {
     this.constellationMap = {};
     this.dynamicBodyMap = {};
     this.starDetailLabels = [];
+    this.cardinalLabels = [];
     this.activeHighlight = null;
     this.flashWhiteColor = new THREE.Color(0xffffff);
     this.flashGoldColor = new THREE.Color(0xfde047);
@@ -696,6 +698,145 @@ export class CelestialGlobeModel {
     });
     this.horizonGroup.add(new THREE.Line(borderGeo, borderMat));
 
+    // 3b. 地球四周地平羅盤環與 N S W E 方位標記 (Compass Collar & Cardinal Ticks)
+    const compassGroup = new THREE.Group();
+
+    // 羅盤半透明底環 (r = 7.3 ~ 15.2，襯托中心地球與四方刻度)
+    const collarGeo = new THREE.RingGeometry(EARTH_RADIUS + 0.82, 15.2, 48);
+    collarGeo.rotateX(-Math.PI / 2);
+    const collarMat = new THREE.MeshBasicMaterial({
+      color: 0x091426,
+      transparent: true,
+      opacity: 0.38,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    compassGroup.add(new THREE.Mesh(collarGeo, collarMat));
+
+    // 內外雙同心圓環刻度
+    const innerRingPts = [];
+    const outerRingPts = [];
+    for (let a = 0; a <= 360; a += 4) {
+      const rad = THREE.MathUtils.degToRad(a);
+      innerRingPts.push(new THREE.Vector3(Math.cos(rad) * 10.6, 0, Math.sin(rad) * 10.6));
+      outerRingPts.push(new THREE.Vector3(Math.cos(rad) * 14.8, 0, Math.sin(rad) * 14.8));
+    }
+    compassGroup.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(innerRingPts),
+        new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 })
+      )
+    );
+    compassGroup.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(outerRingPts),
+        new THREE.LineBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.55 })
+      )
+    );
+
+    // 四向刻度線與 45 度副刻度 (LineSegments)
+    const tickPairs = [
+      // 正北刻度 (-Z 方向)
+      new THREE.Vector3(0, 0, -(EARTH_RADIUS + 0.82)),
+      new THREE.Vector3(0, 0, -15.2),
+      // 正南刻度 (+Z 方向)
+      new THREE.Vector3(0, 0, EARTH_RADIUS + 0.82),
+      new THREE.Vector3(0, 0, 14.8),
+      // 正東刻度 (+X 方向)
+      new THREE.Vector3(EARTH_RADIUS + 0.82, 0, 0),
+      new THREE.Vector3(14.8, 0, 0),
+      // 正西刻度 (-X 方向)
+      new THREE.Vector3(-(EARTH_RADIUS + 0.82), 0, 0),
+      new THREE.Vector3(-14.8, 0, 0)
+    ];
+    [45, 135, 225, 315].forEach((deg) => {
+      const rad = THREE.MathUtils.degToRad(deg);
+      tickPairs.push(
+        new THREE.Vector3(Math.cos(rad) * 11.2, 0, Math.sin(rad) * 11.2),
+        new THREE.Vector3(Math.cos(rad) * 14.2, 0, Math.sin(rad) * 14.2)
+      );
+    });
+    compassGroup.add(
+      new THREE.LineSegments(
+        new THREE.BufferGeometry().setFromPoints(tickPairs),
+        new THREE.LineBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.65 })
+      )
+    );
+
+    // 正北方向專屬立體箭矢標記 (指向 -Z 方向，醒目翠綠)
+    const northArrowPts = [
+      new THREE.Vector3(-0.9, 0, -13.8),
+      new THREE.Vector3(0, 0, -15.8),
+      new THREE.Vector3(0.9, 0, -13.8)
+    ];
+    compassGroup.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(northArrowPts),
+        new THREE.LineBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.95 })
+      )
+    );
+    this.horizonGroup.add(compassGroup);
+
+    // 3c. 地球四周 N S W E 方位標籤 (貼近地球四周 r ≈ 14.0，俯視地平面時正北朝上)
+    const rBadge = 14.0;
+    const earthCardinals = [
+      {
+        pos: new THREE.Vector3(0, 0, -rBadge),
+        html: '<span class="north-arrow">▲</span> <b>N</b> <small>北</small>',
+        isNorth: true
+      },
+      {
+        pos: new THREE.Vector3(0, 0, rBadge),
+        html: '<b>S</b> <small>南</small>',
+        isNorth: false
+      },
+      {
+        pos: new THREE.Vector3(rBadge, 0, 0),
+        html: '<b>E</b> <small>東</small>',
+        isNorth: false
+      },
+      {
+        pos: new THREE.Vector3(-rBadge, 0, 0),
+        html: '<b>W</b> <small>西</small>',
+        isNorth: false
+      }
+    ];
+    earthCardinals.forEach((c) => {
+      const cls = `celestial-label earth-cardinal-label${c.isNorth ? ' cardinal-north' : ''}`;
+      const lbl = this._createLabel(c.pos, c.html, cls, this.horizonGroup);
+      this.cardinalLabels.push(lbl);
+    });
+
+    // 3d. 天球外圈地平環四大方位標籤 (位於天球外邊界 r = GLOBE_RADIUS * 0.995)
+    const rOuter = GLOBE_RADIUS * 0.995;
+    const outerCardinals = [
+      {
+        pos: new THREE.Vector3(0, 0, -rOuter),
+        html: '▲ <b>N</b> <small>正北 (0°)</small>',
+        isNorth: true
+      },
+      {
+        pos: new THREE.Vector3(0, 0, rOuter),
+        html: '<b>S</b> <small>正南 (180°)</small>',
+        isNorth: false
+      },
+      {
+        pos: new THREE.Vector3(rOuter, 0, 0),
+        html: '<b>E</b> <small>正東 (90°)</small>',
+        isNorth: false
+      },
+      {
+        pos: new THREE.Vector3(-rOuter, 0, 0),
+        html: '<b>W</b> <small>正西 (270°)</small>',
+        isNorth: false
+      }
+    ];
+    outerCardinals.forEach((c) => {
+      const cls = `celestial-label outer-cardinal-label${c.isNorth ? ' cardinal-north' : ''}`;
+      const lbl = this._createLabel(c.pos, c.html, cls, this.horizonGroup);
+      this.cardinalLabels.push(lbl);
+    });
+
     // 天頂向量箭頭軸線 (Zenith Normal Axis，垂直於地平面切面並穿出天球外)
     const zenithOuterY = GLOBE_RADIUS * 1.15;
     const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, zenithOuterY, 0)];
@@ -780,6 +921,19 @@ export class CelestialGlobeModel {
           '以觀測者天頂（Zenith，垂直於地平面切面的法線軸）為旋轉軸心，將天球每次旋轉 90°。\n旋轉過程中地平面切面保持原有傾角平面不變，方便您依序從東、南、西、北四個不同方位側面檢視天球上的黃道十二宮與星座。'
       });
     }
+  }
+
+  /**
+   * 重置天頂軸旋轉角度至 0°，並更新天頂按鈕角度文字
+   */
+  resetZenithRotation() {
+    this.zenithSpinSteps = 0;
+    this.targetZenithAngle = 0;
+    this.currentZenithAngle = 0;
+    if (this.zenithRotateBtnDiv) {
+      this.zenithRotateBtnDiv.innerHTML = `<span class="rot-icon">🔄</span> 天頂軸旋轉 +90° <small id="zenith-angle-badge">(0°)</small>`;
+    }
+    this._applyGroupZenithOrientation();
   }
 
   /**
@@ -958,12 +1112,17 @@ export class CelestialGlobeModel {
         this.zenithRotateLabel.visible = options.horizonPlane;
         this.zenithRotateLabel.element.style.display = options.horizonPlane ? '' : 'none';
       }
+      this.cardinalLabels.forEach((lbl) => {
+        lbl.visible = options.horizonPlane;
+        lbl.element.style.display = options.horizonPlane ? '' : 'none';
+      });
     }
     if (options.labels !== undefined) {
       this.labels.forEach((lbl) => {
-        if (lbl === this.zenithRotateLabel) {
-          lbl.visible = this.horizonGroup.visible;
-          lbl.element.style.display = this.horizonGroup.visible ? '' : 'none';
+        if (lbl === this.zenithRotateLabel || this.cardinalLabels.includes(lbl)) {
+          const vis = options.labels && this.horizonGroup.visible;
+          lbl.visible = vis;
+          lbl.element.style.display = vis ? '' : 'none';
         } else {
           lbl.visible = options.labels;
           lbl.element.style.display = options.labels ? '' : 'none';
@@ -993,11 +1152,10 @@ export class CelestialGlobeModel {
       details: `格林威治恆星時 GST: ${formatRA(ephemeris.gstHours)}\n地球自轉姿態與日照晝夜半球完全依據目前輸入的日期時間與經緯度即時計算。`
     };
 
-    // 2. 更新觀測者地平面切面方向 (當地天頂 Zenith 的赤經 = LST, 赤緯 = Lat)，並使天頂旋轉軸預設朝向螢幕正上方 (+Y)
+    // 2. 更新觀測者地平面切面方向 (當地天頂 Zenith 的赤經 = LST, 赤緯 = Lat)，並使天頂旋轉軸預設朝向世界座標 +Y，正北 True North 朝向 -Z
     this.zenithVec.copy(raDecToVector3(ephemeris.lstHours, ephemeris.lat, 1).normalize());
-    const upDefault = new THREE.Vector3(0, 1, 0);
-    this.horizonGroup.quaternion.setFromUnitVectors(upDefault, this.zenithVec);
-    this.zenithToWorldUpQuat.setFromUnitVectors(this.zenithVec, upDefault);
+    this.zenithToWorldUpQuat.copy(getEquatorialToHorizontalQuaternion(ephemeris.lstHours, ephemeris.lat));
+    this.horizonGroup.quaternion.identity();
     this._applyGroupZenithOrientation();
 
     // 2b. 根據太陽是否位於觀測者地平面以上 (sun.altitude >= 0)，動態切換地平面上下半球的天球晝夜顏色：

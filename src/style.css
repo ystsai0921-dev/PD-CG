@@ -812,6 +812,80 @@ input:focus {
   font-size: var(--fs-subtitle);
 }
 
+/* L1 地球四周 N S W E 方位標籤 */
+.celestial-label.earth-cardinal-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid rgba(56, 189, 248, 0.7);
+  color: #e0f2fe;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.65), 0 0 10px rgba(56, 189, 248, 0.3);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.celestial-label.earth-cardinal-label b {
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.celestial-label.earth-cardinal-label small {
+  font-size: 11px;
+  font-family: var(--font-ming);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.celestial-label.earth-cardinal-label .north-arrow {
+  color: #34d399;
+  font-size: 11px;
+}
+
+/* L1 地球四周正北 N (醒目翠綠與外光暈，鎖定正北朝上) */
+.celestial-label.earth-cardinal-label.cardinal-north {
+  background: rgba(6, 78, 59, 0.94);
+  border-color: #34d399;
+  color: #ecfdf5;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.45), 0 0 16px rgba(52, 211, 153, 0.55);
+}
+
+.celestial-label.earth-cardinal-label.cardinal-north b {
+  color: #6ee7b7;
+  font-size: 15px;
+}
+
+/* L1 天球外圈地平環四大方位標籤 */
+.celestial-label.outer-cardinal-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #a7f3d0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.celestial-label.outer-cardinal-label.cardinal-north {
+  border-color: #34d399;
+  background: rgba(6, 78, 59, 0.9);
+  color: #ecfdf5;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.45);
+}
+
 /* L1 天球天頂 90° 旋轉符號按鈕 */
 .zenith-rotate-btn {
   display: inline-flex;

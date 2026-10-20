@@ -246,6 +246,9 @@ export class SceneManager {
 
   resetCameraForCurrentScale() {
     if (this.currentScale === 'celestial') {
+      if (this.celestialModel) {
+        this.celestialModel.resetZenithRotation();
+      }
       const pose = this._getCelestialPose();
       this.controls.setCameraPose(
         pose.position,
@@ -292,6 +295,10 @@ export class SceneManager {
     this.celestialViewMode = viewMode;
     if (this.currentScale !== 'celestial') {
       this.setScale('celestial');
+    }
+    // 切換至「俯視地平面」時重置天頂軸旋轉角，鎖定正北朝向螢幕正上方
+    if (viewMode === 'horizon-top' && this.celestialModel) {
+      this.celestialModel.resetZenithRotation();
     }
     const pose = this._getCelestialPose(viewMode);
     if (smooth) {
