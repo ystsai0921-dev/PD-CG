@@ -233,6 +233,16 @@ export class SceneManager {
     });
   }
 
+  _getSolarFitDistance() {
+    const aspect = this.container.clientWidth / (this.container.clientHeight || 1);
+    const halfFovRad = THREE.MathUtils.degToRad(this.camera.fov / 2);
+    const tanHalfFov = Math.tan(halfFovRad);
+    const fitRadius = 138; // 完整納入海王星軌道 (~112.5)、標籤外延與底部導覽列安全邊距
+    const distV = fitRadius / tanHalfFov;
+    const distH = fitRadius / (tanHalfFov * Math.max(0.5, aspect));
+    return Math.max(distV, distH, 310);
+  }
+
   resetCameraForCurrentScale() {
     if (this.currentScale === 'celestial') {
       // L1 天球儀預設視角：使天頂旋轉軸朝向螢幕正上方 (+Y)，並完整納入天球外天頂按鈕與整個天球
@@ -243,17 +253,23 @@ export class SceneManager {
         600
       );
     } else if (this.currentScale === 'solar') {
-      // L2 太陽系預設視角：俯視黃道面，完整納入各大行星軌道與黃道
-      const targetPos = this.solarModel.getTargetPosition(this.solarTargetId);
-      const offset = this.solarTargetId === 'Sun'
-        ? new THREE.Vector3(0, 270, 0.27)
-        : new THREE.Vector3(0, 26, 0.026);
+      // L2 太陽系重置視角：強制回歸太陽為中心，俯視黃道面並 zoom to fit 完整納入整個太陽系
+      this.solarTargetId = 'Sun';
+      if (this.callbacks.onSolarTargetChange) {
+        this.callbacks.onSolarTargetChange('Sun');
+      }
+      const targetPos = this.solarModel.getTargetPosition('Sun');
+      const fitDist = this._getSolarFitDistance();
       this.controls.setCameraPose(
-        targetPos.clone().add(offset),
+        new THREE.Vector3(0, fitDist, fitDist * 0.001),
         targetPos,
         2,
-        650
+        fitDist * 3
       );
+      const sunItem = this.solarModel.bodyMap.Sun;
+      if (sunItem && sunItem.mesh && sunItem.mesh.userData) {
+        this._handleObjectSelect(sunItem.mesh.userData);
+      }
     } else if (this.currentScale === 'horizon') {
       // L3 地平日月模型預設視角：從地平圈東南側俯視觀測平台與日月升落弧線
       this.controls.setCameraPose(
@@ -269,13 +285,15 @@ export class SceneManager {
     this.solarTargetId = bodyId;
     if (this.currentScale === 'solar') {
       const targetPos = this.solarModel.getTargetPosition(bodyId);
-      const dist = bodyId === 'Sun' ? 270 : 26;
+      const isSun = bodyId === 'Sun';
+      const dist = isSun ? this._getSolarFitDistance() : 26;
+      const maxDist = isSun ? dist * 3 : 650;
       const dir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).normalize();
       this.controls.setCameraPose(
         targetPos.clone().addScaledVector(dir, dist),
         targetPos,
         2,
-        650
+        maxDist
       );
     }
   }
