@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { CustomController } from './Controls.js?v=20261020_07';
-import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261020_07';
-import { SolarSystemModel } from '../models/SolarSystem.js?v=20261020_07';
-import { HorizonModel } from '../models/HorizonModel.js?v=20261020_07';
-import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261020_07';
+import { CustomController } from './Controls.js?v=20261020_08';
+import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261020_08';
+import { SolarSystemModel } from '../models/SolarSystem.js?v=20261020_08';
+import { HorizonModel } from '../models/HorizonModel.js?v=20261020_08';
+import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261020_08';
 
 export class SceneManager {
   constructor(container, callbacks) {
@@ -50,6 +50,7 @@ export class SceneManager {
     // 建立三個尺度的模型實例
     this.currentScale = 'celestial'; // 'celestial' | 'solar' | 'horizon'
     this.solarTargetId = 'Sun';
+    this.celestialViewMode = 'zenith-up'; // 'zenith-up' | 'horizon-top'
 
     this.celestialModel = new CelestialGlobeModel((info) => this._handleObjectSelect(info));
     this.solarModel = new SolarSystemModel((bodyId, info) => {
@@ -245,10 +246,10 @@ export class SceneManager {
 
   resetCameraForCurrentScale() {
     if (this.currentScale === 'celestial') {
-      // L1 天球儀預設視角：使天頂旋轉軸朝向螢幕正上方 (+Y)，並完整納入天球外天頂按鈕與整個天球
+      const pose = this._getCelestialPose();
       this.controls.setCameraPose(
-        new THREE.Vector3(0, 42, 265),
-        new THREE.Vector3(0, 8, 0),
+        pose.position,
+        pose.target,
         1.5,
         600
       );
@@ -280,6 +281,40 @@ export class SceneManager {
         450
       );
     }
+  }
+
+  /**
+   * L1 天球儀雙重視角快速切換：
+   * 1. 'zenith-up': 天頂軸朝上（從側面正視天球儀，天頂垂直朝向螢幕正上方，地平圈水平橫亙中央）
+   * 2. 'horizon-top': 俯視地平面（從天頂正上方俯視地平圈，呈現全天觀星盤 Planisphere 視角）
+   */
+  setCelestialView(viewMode, smooth = true) {
+    this.celestialViewMode = viewMode;
+    if (this.currentScale !== 'celestial') {
+      this.setScale('celestial');
+    }
+    const pose = this._getCelestialPose(viewMode);
+    if (smooth) {
+      this.controls.setCameraPoseSmooth(pose.position, pose.target, 1.5, 600);
+    } else {
+      this.controls.setCameraPose(pose.position, pose.target, 1.5, 600);
+    }
+  }
+
+  _getCelestialPose(viewMode = null) {
+    const mode = viewMode || this.celestialViewMode || 'zenith-up';
+    if (mode === 'horizon-top') {
+      // 俯視地平面：從天頂正上方沿 -Y 俯視當地地平圈 (0, 0, 0)，呈現全天星盤 (Planisphere)
+      return {
+        position: new THREE.Vector3(0, 275, 0.001),
+        target: new THREE.Vector3(0, 0, 0)
+      };
+    }
+    // 天頂軸朝上：從側面正視天球儀，天頂旋轉軸 (+Y) 筆直朝向螢幕正上方，地平圈水平橫貫中央
+    return {
+      position: new THREE.Vector3(0, 36, 265),
+      target: new THREE.Vector3(0, 8, 0)
+    };
   }
 
   setSolarTarget(bodyId) {

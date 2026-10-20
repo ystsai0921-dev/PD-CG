@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PD觀星</title>
   <link rel="icon" type="image/jpeg" href="./public/logo.jpg" />
-  <link rel="stylesheet" href="./src/style.css?v=20261020_07" />
+  <link rel="stylesheet" href="./src/style.css?v=20261020_08" />
   <!-- Import map allows running directly via static server without Node/Vite bundling, while staying 100% compatible with Vite -->
   <script type="importmap">
     {
@@ -124,6 +124,19 @@
         <div class="control-group" id="scale-specific-controls">
           <!-- Level 1 專用選項 -->
           <div id="controls-celestial" class="sub-controls">
+            <!-- L1 雙重視角快速切換 -->
+            <label class="group-label">天球儀快速視角 (Globe Views)</label>
+            <div class="scale-tabs" style="grid-template-columns: 1fr 1fr; margin-bottom: 8px;">
+              <button id="btn-side-zenith-up" class="scale-btn active" title="天頂軸朝上：從側面正視天球儀，天頂垂直朝上，地平圈橫亙中央">
+                <span class="scale-num">🌐</span>
+                <span class="scale-name">天頂軸朝上<small>Zenith Up</small></span>
+              </button>
+              <button id="btn-side-horizon-top" class="scale-btn" title="俯視地平面：從天頂正上方俯視地平圈，呈現全天觀星盤視角">
+                <span class="scale-num">🧭</span>
+                <span class="scale-name">俯視地平面<small>Planisphere</small></span>
+              </button>
+            </div>
+
             <!-- L1 天幕投影功能 (位於播放下方) -->
             <div class="sky-proj-box">
               <label class="group-label">天幕投影 (Planar Sky Screen)</label>
@@ -253,6 +266,17 @@
 
       <!-- 頂部浮動操作列：預留給無中鍵滑鼠使用的左鍵 Orbit / Pan 切換鈕 + Esc 提示 -->
       <div id="interaction-toolbar">
+        <!-- L1 專屬雙重視角切換快捷鈕 -->
+        <div id="l1-view-group" class="toolbar-group">
+          <span class="toolbar-caption">L1 視角：</span>
+          <button id="btn-l1-zenith-up" class="mode-btn view-btn active" title="天頂軸朝上：從側面正視天球儀，天頂垂直朝上，地平圈橫亙中央">
+            🌐 天頂軸朝上
+          </button>
+          <button id="btn-l1-horizon-top" class="mode-btn view-btn" title="俯視地平面：從天頂正上方垂直俯視地平圈，呈現全天觀星盤視角">
+            🧭 俯視地平面
+          </button>
+        </div>
+
         <div class="toolbar-group">
           <span class="toolbar-caption">左鍵輔助模式：</span>
           <button id="btn-mode-orbit" class="mode-btn" title="點擊開啟：直接用滑鼠左鍵旋轉視角 (按 Esc 退出)">
@@ -284,6 +308,6 @@
     </main>
   </div>
 
-  <script type="module" src="./src/main.js?v=20261020_07"></script>
+  <script type="module" src="./src/main.js?v=20261020_08"></script>
 </body>
 </html>

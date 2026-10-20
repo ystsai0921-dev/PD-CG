@@ -1,7 +1,7 @@
-import { SceneManager } from './core/SceneManager.js?v=20261020_07';
-import { SkyScreenView } from './models/SkyScreenView.js?v=20261020_07';
-import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261020_07';
-import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261020_07';
+import { SceneManager } from './core/SceneManager.js?v=20261020_08';
+import { SkyScreenView } from './models/SkyScreenView.js?v=20261020_08';
+import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261020_08';
+import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261020_08';
 
 // 應用程式全域狀態
 const state = {
@@ -55,6 +55,11 @@ const els = {
   selectionDetails: document.getElementById('selection-details'),
 
   // 右側頂部與底部工具列
+  l1ViewGroup: document.getElementById('l1-view-group'),
+  btnL1ZenithUp: document.getElementById('btn-l1-zenith-up'),
+  btnL1HorizonTop: document.getElementById('btn-l1-horizon-top'),
+  btnSideZenithUp: document.getElementById('btn-side-zenith-up'),
+  btnSideHorizonTop: document.getElementById('btn-side-horizon-top'),
   btnModeOrbit: document.getElementById('btn-mode-orbit'),
   btnModePan: document.getElementById('btn-mode-pan'),
   btnResetCam: document.getElementById('btn-reset-cam'),
@@ -248,6 +253,9 @@ function switchScale(scaleName) {
   els.controlsCelestial.classList.toggle('hidden', scaleName !== 'celestial');
   els.controlsSolar.classList.toggle('hidden', scaleName !== 'solar');
   els.controlsHorizon.classList.toggle('hidden', scaleName !== 'horizon');
+  if (els.l1ViewGroup) {
+    els.l1ViewGroup.classList.toggle('hidden', scaleName !== 'celestial');
+  }
   // 底部導覽列切換：L1 顯現黃道十二宮列，L2 顯現八大行星列，L3 均隱藏
   els.zodiacQuickbar.classList.toggle('hidden', scaleName !== 'celestial');
   els.planetQuickbar.classList.toggle('hidden', scaleName !== 'solar');
@@ -431,6 +439,28 @@ function bindUIEvents() {
   els.btnResetCam.addEventListener('click', () => {
     sceneManager.resetCameraForCurrentScale();
   });
+
+  // L1 雙重視角快速切換 (頂部操作列 + 左側控制欄同步聯動)
+  function setL1ViewMode(mode) {
+    sceneManager.setCelestialView(mode, true);
+    if (els.btnL1ZenithUp) els.btnL1ZenithUp.classList.toggle('active', mode === 'zenith-up');
+    if (els.btnL1HorizonTop) els.btnL1HorizonTop.classList.toggle('active', mode === 'horizon-top');
+    if (els.btnSideZenithUp) els.btnSideZenithUp.classList.toggle('active', mode === 'zenith-up');
+    if (els.btnSideHorizonTop) els.btnSideHorizonTop.classList.toggle('active', mode === 'horizon-top');
+  }
+
+  if (els.btnL1ZenithUp) {
+    els.btnL1ZenithUp.addEventListener('click', () => setL1ViewMode('zenith-up'));
+  }
+  if (els.btnL1HorizonTop) {
+    els.btnL1HorizonTop.addEventListener('click', () => setL1ViewMode('horizon-top'));
+  }
+  if (els.btnSideZenithUp) {
+    els.btnSideZenithUp.addEventListener('click', () => setL1ViewMode('zenith-up'));
+  }
+  if (els.btnSideHorizonTop) {
+    els.btnSideHorizonTop.addEventListener('click', () => setL1ViewMode('horizon-top'));
+  }
 }
 
 // 時間推進動畫迴圈

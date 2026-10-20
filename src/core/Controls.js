@@ -57,6 +57,19 @@ export class CustomController {
     this._syncFromCamera();
   }
 
+  /**
+   * 平滑插值將相機平移與轉向至指定位置與注視中心
+   */
+  setCameraPoseSmooth(position, target, minDistance = null, maxDistance = null) {
+    if (minDistance !== null) this.minDistance = minDistance;
+    if (maxDistance !== null) this.maxDistance = maxDistance;
+
+    const offset = new THREE.Vector3().subVectors(position, target);
+    const dist = offset.length();
+    const dir = offset.normalize();
+    this.lookAtDirectionSmooth(dir, dist, target);
+  }
+
   setTargetPosition(newTarget) {
     const delta = new THREE.Vector3().subVectors(newTarget, this.target);
     this.target.copy(newTarget);

@@ -633,6 +633,13 @@ input:focus {
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
 }
 
+.mode-btn.view-btn.active {
+  background: rgba(56, 189, 248, 0.22);
+  color: #38bdf8;
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
 .mode-btn.secondary {
   font-weight: 500;
   color: #93c5fd;
