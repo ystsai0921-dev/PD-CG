@@ -10,7 +10,7 @@ import {
 import { createEarthTextures } from '../utils/earthTexture.js';
 
 const GLOBE_RADIUS = 100;
-const EARTH_RADIUS = 7.2;
+const EARTH_RADIUS = 6.48; // 地球模型大小縮小 10% (原 7.2 -> 6.48)
 
 export class CelestialGlobeModel {
   constructor(onSelectObject) {

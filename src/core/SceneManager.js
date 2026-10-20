@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { CustomController } from './Controls.js?v=20261020_08';
-import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261020_08';
-import { SolarSystemModel } from '../models/SolarSystem.js?v=20261020_08';
-import { HorizonModel } from '../models/HorizonModel.js?v=20261020_08';
-import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261020_08';
+import { CustomController } from './Controls.js?v=20261020_09';
+import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261020_09';
+import { SolarSystemModel } from '../models/SolarSystem.js?v=20261020_09';
+import { HorizonModel } from '../models/HorizonModel.js?v=20261020_09';
+import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261020_09';
 
 export class SceneManager {
   constructor(container, callbacks) {
@@ -304,15 +304,15 @@ export class SceneManager {
   _getCelestialPose(viewMode = null) {
     const mode = viewMode || this.celestialViewMode || 'zenith-up';
     if (mode === 'horizon-top') {
-      // 俯視地平面：從天頂正上方沿 -Y 俯視當地地平圈 (0, 0, 0)，呈現全天星盤 (Planisphere)
+      // 俯視地平面：從天頂正上方沿 -Y 俯視當地地平圈 (0, 0, 0)，呈現全天星盤 (Planisphere)，畫面尺寸縮小 10%
       return {
-        position: new THREE.Vector3(0, 275, 0.001),
+        position: new THREE.Vector3(0, 305, 0.001),
         target: new THREE.Vector3(0, 0, 0)
       };
     }
-    // 天頂軸朝上：從側面正視天球儀，天頂旋轉軸 (+Y) 筆直朝向螢幕正上方，地平圈水平橫貫中央
+    // 天頂軸朝上：從側面正視天球儀，天頂旋轉軸 (+Y) 筆直朝向螢幕正上方，地平圈水平橫貫中央，畫面尺寸縮小 10%
     return {
-      position: new THREE.Vector3(0, 36, 265),
+      position: new THREE.Vector3(0, 40, 295),
       target: new THREE.Vector3(0, 8, 0)
     };
   }

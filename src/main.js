@@ -1,7 +1,7 @@
-import { SceneManager } from './core/SceneManager.js?v=20261020_08';
-import { SkyScreenView } from './models/SkyScreenView.js?v=20261020_08';
-import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261020_08';
-import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261020_08';
+import { SceneManager } from './core/SceneManager.js?v=20261020_09';
+import { SkyScreenView } from './models/SkyScreenView.js?v=20261020_09';
+import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261020_09';
+import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261020_09';
 
 // 應用程式全域狀態
 const state = {
@@ -255,6 +255,10 @@ function switchScale(scaleName) {
   els.controlsHorizon.classList.toggle('hidden', scaleName !== 'horizon');
   if (els.l1ViewGroup) {
     els.l1ViewGroup.classList.toggle('hidden', scaleName !== 'celestial');
+  }
+  // L1 隱藏「重置視角」按鈕（已有「天頂軸朝上」與「俯視地平面」專屬視角快捷鈕）；L2/L3 則正常提供「重置視角」
+  if (els.btnResetCam) {
+    els.btnResetCam.classList.toggle('hidden', scaleName === 'celestial');
   }
   // 底部導覽列切換：L1 顯現黃道十二宮列，L2 顯現八大行星列，L3 均隱藏
   els.zodiacQuickbar.classList.toggle('hidden', scaleName !== 'celestial');
