@@ -23,6 +23,7 @@ export class SceneManager {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.localClippingEnabled = true;
     container.appendChild(this.renderer.domElement);
 
     // CSS2D 標籤渲染器 (用於呈現星座繁體中文+英文名稱標籤)
@@ -139,8 +140,13 @@ export class SceneManager {
     else if (this.currentScale === 'horizon') activePickables = this.horizonModel.pickables;
 
     const hits = this.raycaster.intersectObjects(activePickables, false);
-    if (hits.length > 0) {
-      const obj = hits[0].object;
+    for (let i = 0; i < hits.length; i++) {
+      const hit = hits[i];
+      // 若處於 L1 正北朝上俯視模式，地平面以下 (world Y < -0.01) 已被裁切隱藏，不可被射線點選
+      if (this.currentScale === 'celestial' && this.celestialViewMode === 'horizon-top') {
+        if (hit.point.y < -0.01) continue;
+      }
+      const obj = hit.object;
       if (obj.userData) {
         if (this.currentScale === 'celestial') {
           if (obj.userData.isZenithRotator) {
@@ -164,6 +170,7 @@ export class SceneManager {
         }
         this._handleObjectSelect(obj.userData);
       }
+      break;
     }
   }
 
@@ -217,12 +224,16 @@ export class SceneManager {
       }
     }
     if (isCelestial && this.celestialModel.zenithRotateLabel) {
-      this.celestialModel.zenithRotateLabel.visible = this.celestialModel.horizonGroup.visible;
-      this.celestialModel.zenithRotateLabel.element.style.display =
-        this.celestialModel.horizonGroup.visible ? '' : 'none';
+      const showZenith = this.celestialViewMode !== 'horizon-top' && this.celestialModel.horizonGroup.visible;
+      this.celestialModel.zenithRotateLabel.visible = showZenith;
+      this.celestialModel.zenithRotateLabel.element.style.display = showZenith ? '' : 'none';
     }
     this.solarModel.syncLabelsVisibility(isSolar);
     this._setLabelsVisible(this.horizonModel.labels, isHorizon);
+
+    if (isCelestial && this.celestialModel) {
+      this.celestialModel.setViewMode(this.celestialViewMode || 'zenith-up');
+    }
 
     this.resetCameraForCurrentScale();
   }
@@ -248,6 +259,7 @@ export class SceneManager {
     if (this.currentScale === 'celestial') {
       if (this.celestialModel) {
         this.celestialModel.resetZenithRotation();
+        this.celestialModel.setViewMode(this.celestialViewMode || 'zenith-up');
       }
       const pose = this._getCelestialPose();
       this.controls.setCameraPose(
@@ -296,14 +308,10 @@ export class SceneManager {
     if (this.currentScale !== 'celestial') {
       this.setScale('celestial');
     }
-    // 切換 L1 視角時重置天頂軸旋轉角，確保視角基線嚴格一致
+    // 切換 L1 視角時重置天頂軸旋轉角，並更新地平半球裁切與標籤可見性
     if (this.celestialModel) {
       this.celestialModel.resetZenithRotation();
-      if (this.celestialModel.zenithRotateLabel) {
-        const showZenithBtn = viewMode !== 'horizon-top';
-        this.celestialModel.zenithRotateLabel.visible = showZenithBtn;
-        this.celestialModel.zenithRotateLabel.element.style.display = showZenithBtn ? '' : 'none';
-      }
+      this.celestialModel.setViewMode(viewMode);
     }
     const pose = this._getCelestialPose(viewMode);
     if (smooth) {
