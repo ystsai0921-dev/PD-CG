@@ -467,7 +467,8 @@ export class CelestialGlobeModel {
     // 預設天球距離約 228，適度 Zoom-in 距離介於 145 ~ 168（視星群跨距自動調整）
     const zoomDistance = Math.round(Math.max(145, Math.min(168, GLOBE_RADIUS + 38 + maxSpread * 1.35)));
 
-    const pureNameZh = isZodiac ? `${c.symbol} ${c.nameZh}` : c.nameZh.split('（')[0];
+    const cleanNameZh = c.nameZh.split('（')[0].trim();
+    const pureNameZh = isZodiac ? `${c.symbol} ${cleanNameZh}` : cleanNameZh;
     const fullDisplayName = `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh}`;
     const conciseLabelHtml = pureNameZh;
     const expandedLabelHtml = isZodiac
@@ -564,6 +565,7 @@ export class CelestialGlobeModel {
         s.haloMesh.material.opacity = 0;
         s.detailLabel.visible = false;
         s.detailLabel.element.style.display = 'none';
+        s.detailLabel.element.classList.remove('is-visible');
       });
     });
 
@@ -731,6 +733,7 @@ export class CelestialGlobeModel {
       s.haloMesh.visible = true;
       s.detailLabel.visible = true;
       s.detailLabel.element.style.display = '';
+      s.detailLabel.element.classList.add('is-visible');
     });
 
     if (this.isHorizonTop) {
@@ -772,6 +775,7 @@ export class CelestialGlobeModel {
         s.haloMesh.visible = true;
         s.detailLabel.visible = true;
         s.detailLabel.element.style.display = '';
+        s.detailLabel.element.classList.add('is-visible');
       });
       if (this.isHorizonTop) {
         this.updateHorizonClippedLabels();
@@ -1409,10 +1413,11 @@ export class CelestialGlobeModel {
       cEntry.starEntries.forEach((s) => {
         if (s.detailLabel) {
           const starWorldY = s.mesh.position.clone().applyQuaternion(this.group.quaternion).y;
-          const isSel = this.activeHighlight && this.activeHighlight.constellationId === cEntry.c.id;
+          const isSel = Boolean(this.activeHighlight && this.activeHighlight.constellationId === cEntry.c.id);
           const starVis = starWorldY >= -0.01 && isSel;
           s.detailLabel.visible = starVis;
           s.detailLabel.element.style.display = starVis ? '' : 'none';
+          s.detailLabel.element.classList.toggle('is-visible', starVis);
         }
       });
     });
@@ -1464,9 +1469,10 @@ export class CelestialGlobeModel {
       }
       cEntry.starEntries.forEach((s) => {
         if (s.detailLabel) {
-          const isSelected = this.activeHighlight && this.activeHighlight.constellationId === cEntry.c.id;
+          const isSelected = Boolean(this.activeHighlight && this.activeHighlight.constellationId === cEntry.c.id);
           s.detailLabel.visible = isSelected;
           s.detailLabel.element.style.display = isSelected ? '' : 'none';
+          s.detailLabel.element.classList.toggle('is-visible', isSelected);
         }
       });
     });

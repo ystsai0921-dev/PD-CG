@@ -1039,8 +1039,9 @@ input:focus {
   font-weight: 400;
 }
 
-/* L1 點擊星座後顯現的各顆恆星名字與視星等標籤（閃爍三下後光暈消失、標籤維持清晰） */
+/* L1 點擊星座後顯現的各顆恆星名字與視星等標籤（預設強制隱藏，僅在該星座被點選鎖定時透過 .is-visible 顯現） */
 .star-detail-label {
+  display: none !important;
   color: #fef9c3;
   font-family: var(--font-ming);
   font-size: var(--fs-content);
@@ -1056,6 +1057,10 @@ input:focus {
   user-select: none;
   z-index: 14;
   transform: translateY(-14px);
+}
+
+.star-detail-label.is-visible {
+  display: block !important;
   animation: starLabelPulse 0.55s ease-in-out 3 forwards;
 }
 

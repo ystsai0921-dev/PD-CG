@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { CustomController } from './Controls.js?v=20261020_09';
-import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261020_09';
-import { SolarSystemModel } from '../models/SolarSystem.js?v=20261020_09';
-import { HorizonModel } from '../models/HorizonModel.js?v=20261020_09';
-import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261020_09';
+import { CustomController } from './Controls.js?v=20261022_04';
+import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261022_04';
+import { SolarSystemModel } from '../models/SolarSystem.js?v=20261022_04';
+import { HorizonModel } from '../models/HorizonModel.js?v=20261022_04';
+import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261022_04';
 
 export class SceneManager {
   constructor(container, callbacks) {
@@ -279,8 +279,11 @@ export class SceneManager {
 
     // 隱藏非當前尺度的 CSS2D 標籤
     this._setLabelsVisible(this.celestialModel.labels, isCelestial && this.celestialLabelsEnabled !== false);
-    if (!isCelestial) {
+    if (!isCelestial || !this.celestialModel.activeHighlight) {
       this._setLabelsVisible(this.celestialModel.starDetailLabels, false);
+      this.celestialModel.starDetailLabels.forEach((lbl) => {
+        if (lbl.element) lbl.element.classList.remove('is-visible');
+      });
     } else if (
       this.celestialModel.activeHighlight &&
       this.celestialModel.activeHighlight.type === 'Constellation'
@@ -291,6 +294,7 @@ export class SceneManager {
         cEntry.starEntries.forEach((s) => {
           s.detailLabel.visible = true;
           s.detailLabel.element.style.display = '';
+          s.detailLabel.element.classList.add('is-visible');
         });
       }
     }
@@ -327,13 +331,17 @@ export class SceneManager {
   }
 
   resetCameraForCurrentScale() {
+    this.clearSelectionHighlight();
+    this.clearHover();
     if (this.currentScale === 'celestial') {
       if (this.celestialModel) {
+        this.celestialModel.clearHighlight();
+        this.celestialModel.clearHover();
         this.celestialModel.resetZenithRotation();
         this.celestialModel.setViewMode(this.celestialViewMode || 'zenith-up');
       }
       const pose = this._getCelestialPose();
-      this.controls.setCameraPose(
+      this.controls.setCameraPoseSmooth(
         pose.position,
         pose.target,
         1.5,
