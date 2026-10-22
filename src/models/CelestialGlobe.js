@@ -864,7 +864,7 @@ export class CelestialGlobeModel {
     });
 
     // 天頂向量箭頭軸線 (Zenith Normal Axis，垂直於地平面切面並穿出天球外)
-    const zenithOuterY = GLOBE_RADIUS * 1.15;
+    const zenithOuterY = GLOBE_RADIUS * 1.07;
     const zenithPts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, zenithOuterY, 0)];
     const zenithGeo = new THREE.BufferGeometry().setFromPoints(zenithPts);
     const zenithMat = new THREE.LineDashedMaterial({
@@ -888,19 +888,19 @@ export class CelestialGlobeModel {
     this.pickables.push(outerShaftMesh);
     this.horizonGroup.add(outerShaftMesh);
 
-    // 4. 天頂球外 3D 旋轉軸頂錐與黃色環形旋轉指標 (移至天球外側 y = GLOBE_RADIUS * 1.15)
+    // 4. 天頂球外 3D 旋轉軸頂錐與黃色環形旋轉指標 (緊鄰天球外側 y = GLOBE_RADIUS * 1.07)
     const zenithCapGroup = new THREE.Group();
     zenithCapGroup.position.set(0, zenithOuterY, 0);
 
-    const coneGeo = new THREE.ConeGeometry(1.6, 3.8, 18);
+    const coneGeo = new THREE.ConeGeometry(1.4, 3.0, 18);
     const coneMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
     const coneMesh = new THREE.Mesh(coneGeo, coneMat);
-    coneMesh.position.set(0, 1.5, 0);
+    coneMesh.position.set(0, 1.2, 0);
     coneMesh.userData = { isZenithRotator: true };
     this.pickables.push(coneMesh);
     zenithCapGroup.add(coneMesh);
 
-    const torusGeo = new THREE.TorusGeometry(3.6, 0.36, 12, 32, Math.PI * 1.65);
+    const torusGeo = new THREE.TorusGeometry(3.0, 0.3, 12, 32, Math.PI * 1.65);
     torusGeo.rotateX(Math.PI / 2);
     const torusMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
     this.zenithRingMesh = new THREE.Mesh(torusGeo, torusMat);
@@ -910,7 +910,7 @@ export class CelestialGlobeModel {
 
     this.horizonGroup.add(zenithCapGroup);
 
-    // 5. 天頂互動式「🔄 旋轉 90°」符號按鈕 (位於球外箭頭更外側 y = GLOBE_RADIUS * 1.23)
+    // 5. 天頂互動式「🔄 旋轉 90°」符號按鈕 (位於球外箭頭頂部上方 y = GLOBE_RADIUS * 1.13)
     const rotBtnDiv = document.createElement('div');
     rotBtnDiv.className = 'zenith-rotate-btn';
     rotBtnDiv.title = '點擊使天球繞垂直地平面切面的天頂軸旋轉 90°';
@@ -921,7 +921,7 @@ export class CelestialGlobeModel {
     });
     this.zenithRotateBtnDiv = rotBtnDiv;
     this.zenithRotateLabel = new CSS2DObject(rotBtnDiv);
-    this.zenithRotateLabel.position.set(0, GLOBE_RADIUS * 1.23, 0);
+    this.zenithRotateLabel.position.set(0, GLOBE_RADIUS * 1.13, 0);
     this.horizonGroup.add(this.zenithRotateLabel);
     this.labels.push(this.zenithRotateLabel);
   }

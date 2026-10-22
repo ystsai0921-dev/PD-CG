@@ -299,6 +299,11 @@ export class SceneManager {
     // 切換 L1 視角時重置天頂軸旋轉角，確保視角基線嚴格一致
     if (this.celestialModel) {
       this.celestialModel.resetZenithRotation();
+      if (this.celestialModel.zenithRotateLabel) {
+        const showZenithBtn = viewMode !== 'horizon-top';
+        this.celestialModel.zenithRotateLabel.visible = showZenithBtn;
+        this.celestialModel.zenithRotateLabel.element.style.display = showZenithBtn ? '' : 'none';
+      }
     }
     const pose = this._getCelestialPose(viewMode);
     if (smooth) {
@@ -311,15 +316,15 @@ export class SceneManager {
   _getCelestialPose(viewMode = null) {
     const mode = viewMode || this.celestialViewMode || 'zenith-up';
     if (mode === 'horizon-top') {
-      // 俯視地平面：從天頂正上方沿 -Y 俯視當地地平圈 (0, 0, 0)，呈現全天星盤 (Planisphere)，畫面尺寸縮小 10%
+      // 俯視地平面：從天頂正上方沿 -Y 俯視當地地平圈 (0, 0, 0)，呈現全天星盤 (Planisphere)
       return {
-        position: new THREE.Vector3(0, 305, 0.001),
+        position: new THREE.Vector3(0, 310, 0.001),
         target: new THREE.Vector3(0, 0, 0)
       };
     }
-    // 天頂軸朝上：從側面水平正視天球儀，天頂旋轉軸 (+Y) 筆直朝向螢幕正上方，地平圈水平橫貫中央，畫面尺寸縮小 10%
+    // 天頂軸朝上：從側面水平正視天球儀，天頂旋轉軸 (+Y) 筆直朝向螢幕正上方，地平圈水平橫貫中央，預留頂部工具列呼吸空間
     return {
-      position: new THREE.Vector3(0, 0, 295),
+      position: new THREE.Vector3(0, 0, 340),
       target: new THREE.Vector3(0, 0, 0)
     };
   }
