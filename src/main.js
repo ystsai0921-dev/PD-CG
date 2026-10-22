@@ -70,14 +70,32 @@ const els = {
   planetPills: document.getElementById('planet-pills')
 };
 
+const defaultSelectionTipHtml =
+  '尚未選取特定天體。滑鼠懸停於星座或天體上可即時預覽進一步資訊，左鍵點擊即可聚焦放大（按 <b>Esc</b> 退出高亮狀態）。';
+
+let selectedObjectInfo = null;
+
 // 初始化 3D 場景管理器与 L1 平面天幕投影器
 const sceneManager = new SceneManager(els.canvasContainer, {
   onControlModeChange: (mode) => updateControlModeUI(mode),
-  onSelectObject: (info) => renderSelectionInfo(info),
+  onSelectObject: (info) => {
+    selectedObjectInfo = info;
+    renderSelectionInfo(info);
+  },
   onClearSelection: () => {
+    selectedObjectInfo = null;
     document.querySelectorAll('.zodiac-pill, .planet-pill').forEach((p) => p.classList.remove('active'));
-    els.selectionDetails.innerHTML =
-      '尚未選取特定天體。左鍵點擊畫面中的星座名、恆星或行星即可閃爍高亮並檢視詳細資訊（按 <b>Esc</b> 退出高亮狀態）。';
+    els.selectionDetails.innerHTML = defaultSelectionTipHtml;
+  },
+  onHoverObject: (info) => {
+    renderSelectionInfo(info);
+  },
+  onClearHover: () => {
+    if (selectedObjectInfo) {
+      renderSelectionInfo(selectedObjectInfo);
+    } else {
+      els.selectionDetails.innerHTML = defaultSelectionTipHtml;
+    }
   },
   onSolarTargetChange: (bodyId) => {
     els.selectSolarTarget.value = bodyId;
@@ -148,6 +166,12 @@ function initZodiacQuickbar() {
       }
       sceneManager.focusZodiacConstellation(sign.id);
     });
+    btn.addEventListener('mouseenter', () => {
+      sceneManager.hoverConstellation(sign.id);
+    });
+    btn.addEventListener('mouseleave', () => {
+      sceneManager.clearHover();
+    });
     els.zodiacPills.appendChild(btn);
   });
 }
@@ -172,6 +196,16 @@ function initPlanetQuickbar() {
       const item = sceneManager.solarModel.bodyMap[p.id];
       if (item && item.mesh && item.mesh.userData) {
         renderSelectionInfo(item.mesh.userData);
+      }
+    });
+    btn.addEventListener('mouseenter', () => {
+      if (state.scale === 'celestial') {
+        sceneManager.hoverBody(p.id);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (state.scale === 'celestial') {
+        sceneManager.clearHover();
       }
     });
     els.planetPills.appendChild(btn);

@@ -40,9 +40,13 @@ function getEquatorialToHorizontalQuaternion(lstHours, latDeg) {
 }
 
 export class CelestialGlobeModel {
-  constructor(onSelectObject) {
+  constructor(onSelectObject, onHoverObject = null, onClearHover = null) {
     this.group = new THREE.Group();
     this.onSelectObject = onSelectObject;
+    this.onHoverObject = onHoverObject;
+    this.onClearHover = onClearHover;
+    this.hoveredConstellationId = null;
+    this.hoveredBodyId = null;
     this.pickables = [];
     this.labels = [];
 
@@ -463,10 +467,34 @@ export class CelestialGlobeModel {
     // 預設天球距離約 228，適度 Zoom-in 距離介於 145 ~ 168（視星群跨距自動調整）
     const zoomDistance = Math.round(Math.max(145, Math.min(168, GLOBE_RADIUS + 38 + maxSpread * 1.35)));
 
-    const conciseLabelHtml = isZodiac ? `${c.symbol} ${c.nameZh}` : `${c.nameZh}`;
+    const pureNameZh = isZodiac ? `${c.symbol} ${c.nameZh}` : c.nameZh.split('（')[0];
+    const fullDisplayName = `${c.symbol ? c.symbol + ' ' : ''}${c.nameZh}`;
+    const conciseLabelHtml = pureNameZh;
     const expandedLabelHtml = isZodiac
       ? `${c.symbol} ${c.nameZh} <small>${c.nameEn}</small>`
       : `${c.nameZh} <small>${c.nameEn}</small>`;
+
+    const zodiacIndex = ZODIAC_CONSTELLATIONS.findIndex((z) => z.id === c.id);
+    const categoryText = isZodiac
+      ? `黃道第 ${zodiacIndex + 1} 宮 ｜ 黃經 ${c.eclipticStart}° ~ ${c.eclipticStart + 30}°`
+      : '全天重要代表星座';
+    const mainStar = c.stars && c.stars[0] ? `主星：${c.stars[0].name.split(' (')[0]} (${c.stars[0].mag}等)` : '';
+    const starMeta = mainStar ? `${mainStar} ｜ 共 ${c.stars.length} 顆主要亮星` : `共 ${c.stars.length} 顆主要亮星`;
+
+    // 畫面簡潔設計：預設僅顯現簡短名稱，滑鼠 hover 懸停時才展開進一步卡片資訊
+    const labelInnerHtml = `
+      <span class="const-label-text">${pureNameZh}</span>
+      <div class="const-hover-card">
+        <div class="hover-title">
+          <span>${fullDisplayName}</span>
+          <small>${c.nameEn}</small>
+        </div>
+        <div class="hover-meta">${categoryText}</div>
+        <div class="hover-meta-sub">${starMeta}</div>
+        <div class="hover-desc">${c.desc}</div>
+        <div class="hover-tip">💡 點擊以放大聚焦此星群</div>
+      </div>
+    `;
 
     const constSelectInfo = {
       type: 'Constellation',
@@ -481,12 +509,12 @@ export class CelestialGlobeModel {
 
     const labelObj = this._createLabel(
       centerPos,
-      conciseLabelHtml,
+      labelInnerHtml,
       isZodiac ? 'celestial-label zodiac-label' : 'celestial-label',
       cGroup,
-      () => {
-        this.selectConstellation(c.id);
-      }
+      () => this.selectConstellation(c.id),
+      () => this.hoverConstellation(c.id),
+      () => this.clearHover()
     );
     c.centerDirection = centerDir.clone();
     c.zoomDistance = zoomDistance;
@@ -501,6 +529,7 @@ export class CelestialGlobeModel {
       baseLineColorObj: new THREE.Color(baseLineColorHex),
       baseLineOpacity,
       labelObj,
+      pureNameZh,
       conciseLabelHtml,
       expandedLabelHtml,
       selectInfo: constSelectInfo
@@ -518,8 +547,13 @@ export class CelestialGlobeModel {
     }
 
     Object.values(this.constellationMap).forEach((entry) => {
-      entry.labelObj.element.classList.remove('active-blink-label', 'muted-constellation-label');
-      entry.labelObj.element.innerHTML = entry.conciseLabelHtml;
+      entry.labelObj.element.classList.remove('active-blink-label', 'muted-constellation-label', 'is-hovered');
+      const textEl = entry.labelObj.element.querySelector('.const-label-text');
+      if (textEl) {
+        textEl.innerHTML = entry.pureNameZh;
+      } else {
+        entry.labelObj.element.innerHTML = entry.conciseLabelHtml;
+      }
       entry.lineMat.color.setHex(entry.baseLineColorHex);
       entry.lineMat.opacity = entry.baseLineOpacity;
       entry.starEntries.forEach((s) => {
@@ -535,8 +569,13 @@ export class CelestialGlobeModel {
 
     Object.values(this.dynamicBodyMap).forEach((b) => {
       if (b.labelObj && b.labelObj.element) {
-        b.labelObj.element.classList.remove('active-blink-label');
-        if (b.conciseHtml) b.labelObj.element.innerHTML = b.conciseHtml;
+        b.labelObj.element.classList.remove('active-blink-label', 'is-hovered');
+        const textEl = b.labelObj.element.querySelector('.const-label-text');
+        if (textEl && b.conciseHtml) {
+          textEl.innerHTML = b.conciseHtml;
+        } else if (b.conciseHtml) {
+          b.labelObj.element.innerHTML = b.conciseHtml;
+        }
       }
       b.mesh.scale.setScalar(1);
       b.mesh.material.color.setHex(b.baseColorHex);
@@ -547,6 +586,99 @@ export class CelestialGlobeModel {
     });
 
     this.activeHighlight = null;
+  }
+
+  /**
+   * 滑鼠懸停至某星座時：畫面維持簡潔，展開該星座的進一步資訊卡片並微幅加亮該星群連線
+   */
+  hoverConstellation(constellationId) {
+    if (this.hoveredConstellationId === constellationId) return;
+    this.clearHover();
+
+    const entry = this.constellationMap[constellationId];
+    if (!entry) return;
+    this.hoveredConstellationId = constellationId;
+
+    if (entry.labelObj && entry.labelObj.element) {
+      entry.labelObj.element.classList.add('is-hovered');
+    }
+
+    if (!this.activeHighlight || this.activeHighlight.constellationId !== constellationId) {
+      entry.lineMat.opacity = 1.0;
+      entry.lineMat.color.setHex(entry.isZodiac ? 0xfde047 : 0x7dd3fc);
+      entry.starEntries.forEach((s) => {
+        s.mesh.scale.setScalar(1.22);
+        s.haloMesh.visible = true;
+        s.haloMesh.scale.setScalar(1.2);
+        s.haloMesh.material.opacity = 0.45;
+      });
+    }
+
+    if (this.onHoverObject) {
+      this.onHoverObject(entry.selectInfo);
+    }
+  }
+
+  /**
+   * 滑鼠懸停至行星、太陽或月球時：展開懸停資訊卡
+   */
+  hoverBody(bodyId) {
+    if (this.hoveredBodyId === bodyId) return;
+    this.clearHover();
+
+    const b = this.dynamicBodyMap[bodyId];
+    if (!b) return;
+    this.hoveredBodyId = bodyId;
+
+    if (b.labelObj && b.labelObj.element) {
+      b.labelObj.element.classList.add('is-hovered');
+    }
+    if (b.mesh && b.mesh.userData && this.onHoverObject) {
+      this.onHoverObject(b.mesh.userData);
+    }
+  }
+
+  /**
+   * 滑鼠移開懸停對象：卡片淡出收合，恢復天球乾淨簡潔預設視野
+   */
+  clearHover() {
+    if (!this.hoveredConstellationId && !this.hoveredBodyId) return;
+
+    if (this.hoveredConstellationId) {
+      const entry = this.constellationMap[this.hoveredConstellationId];
+      if (entry) {
+        if (entry.labelObj && entry.labelObj.element) {
+          entry.labelObj.element.classList.remove('is-hovered');
+        }
+        if (!this.activeHighlight || this.activeHighlight.constellationId !== this.hoveredConstellationId) {
+          const isMuted = this.activeHighlight && this.activeHighlight.type === 'Constellation';
+          entry.lineMat.opacity = isMuted ? entry.baseLineOpacity * 0.5 : entry.baseLineOpacity;
+          entry.lineMat.color.setHex(entry.baseLineColorHex);
+          if (isMuted) entry.lineMat.color.copy(entry.baseLineColorObj).multiplyScalar(0.5);
+          entry.starEntries.forEach((s) => {
+            s.mesh.scale.setScalar(1);
+            s.mesh.material.opacity = isMuted ? 0.5 : 1.0;
+            s.mesh.material.color.setHex(s.baseColorHex);
+            if (isMuted) s.mesh.material.color.copy(s.baseColorObj).multiplyScalar(0.5);
+            s.haloMesh.visible = false;
+            s.haloMesh.material.opacity = 0;
+          });
+        }
+      }
+      this.hoveredConstellationId = null;
+    }
+
+    if (this.hoveredBodyId) {
+      const b = this.dynamicBodyMap[this.hoveredBodyId];
+      if (b && b.labelObj && b.labelObj.element) {
+        b.labelObj.element.classList.remove('is-hovered');
+      }
+      this.hoveredBodyId = null;
+    }
+
+    if (this.onClearHover) {
+      this.onClearHover();
+    }
   }
 
   /**
@@ -586,7 +718,12 @@ export class CelestialGlobeModel {
       startTime: performance.now() * 0.001
     };
 
-    entry.labelObj.element.innerHTML = entry.expandedLabelHtml;
+    const textEl = entry.labelObj.element.querySelector('.const-label-text');
+    if (textEl) {
+      textEl.innerHTML = entry.expandedLabelHtml;
+    } else {
+      entry.labelObj.element.innerHTML = entry.expandedLabelHtml;
+    }
     void entry.labelObj.element.offsetWidth;
     entry.labelObj.element.classList.add('active-blink-label');
     entry.starEntries.forEach((s) => {
@@ -622,7 +759,12 @@ export class CelestialGlobeModel {
         focusStarName: starUserData.starName,
         startTime: performance.now() * 0.001
       };
-      entry.labelObj.element.innerHTML = entry.expandedLabelHtml;
+      const textEl = entry.labelObj.element.querySelector('.const-label-text');
+      if (textEl) {
+        textEl.innerHTML = entry.expandedLabelHtml;
+      } else {
+        entry.labelObj.element.innerHTML = entry.expandedLabelHtml;
+      }
       void entry.labelObj.element.offsetWidth;
       entry.labelObj.element.classList.add('active-blink-label');
       entry.starEntries.forEach((s) => {
@@ -656,7 +798,12 @@ export class CelestialGlobeModel {
     };
 
     if (bEntry.labelObj && bEntry.labelObj.element) {
-      if (bEntry.expandedHtml) bEntry.labelObj.element.innerHTML = bEntry.expandedHtml;
+      const textEl = bEntry.labelObj.element.querySelector('.const-label-text');
+      if (textEl && bEntry.expandedHtml) {
+        textEl.innerHTML = bEntry.expandedHtml;
+      } else if (bEntry.expandedHtml) {
+        bEntry.labelObj.element.innerHTML = bEntry.expandedHtml;
+      }
       void bEntry.labelObj.element.offsetWidth;
       bEntry.labelObj.element.classList.add('active-blink-label');
     }
@@ -1078,12 +1225,23 @@ export class CelestialGlobeModel {
     this.pickables.push(this.sunMesh);
     this.dynamicBodiesGroup.add(this.sunMesh);
 
+    const sunLabelHtml = `
+      <span class="const-label-text">☀ 太陽</span>
+      <div class="const-hover-card">
+        <div class="hover-title"><span>☀ 太陽</span><small>Sun</small></div>
+        <div class="hover-meta">太陽系中心天體 ｜ 黃道運行樞紐</div>
+        <div class="hover-desc">位於天球黃道帶上，向陽面即時照射中心地球呈現晝夜白晝面。</div>
+        <div class="hover-tip">💡 點擊以檢視太陽詳細天文資訊</div>
+      </div>
+    `;
     this.sunLabel = this._createLabel(
       new THREE.Vector3(),
-      '☀ 太陽',
+      sunLabelHtml,
       'celestial-label zodiac-label',
       this.dynamicBodiesGroup,
-      () => this.selectDynamicBody('Sun')
+      () => this.selectDynamicBody('Sun'),
+      () => this.hoverBody('Sun'),
+      () => this.clearHover()
     );
 
     this.dynamicBodyMap.Sun = {
@@ -1110,12 +1268,23 @@ export class CelestialGlobeModel {
     this.pickables.push(this.moonMesh);
     this.dynamicBodiesGroup.add(this.moonMesh);
 
+    const moonLabelHtml = `
+      <span class="const-label-text">🌙 月球</span>
+      <div class="const-hover-card">
+        <div class="hover-title"><span>🌙 月球</span><small>Moon</small></div>
+        <div class="hover-meta">地球天然衛星 ｜ 白道運行週期</div>
+        <div class="hover-desc">呈現真實相對月相與陰晴圓缺，並投影於天球視角。</div>
+        <div class="hover-tip">💡 點擊以檢視月球詳細天文資訊</div>
+      </div>
+    `;
     this.moonLabel = this._createLabel(
       new THREE.Vector3(),
-      '🌙 月球',
+      moonLabelHtml,
       'celestial-label planet-label',
       this.dynamicBodiesGroup,
-      () => this.selectDynamicBody('Moon')
+      () => this.selectDynamicBody('Moon'),
+      () => this.hoverBody('Moon'),
+      () => this.clearHover()
     );
 
     this.dynamicBodyMap.Moon = {
@@ -1130,7 +1299,7 @@ export class CelestialGlobeModel {
     };
   }
 
-  _createLabel(position, htmlContent, className, parentGroup, onClick = null) {
+  _createLabel(position, htmlContent, className, parentGroup, onClick = null, onEnter = null, onLeave = null) {
     const div = document.createElement('div');
     div.className = className;
     div.innerHTML = htmlContent;
@@ -1139,6 +1308,12 @@ export class CelestialGlobeModel {
         e.stopPropagation();
         onClick();
       });
+    }
+    if (onEnter) {
+      div.addEventListener('mouseenter', () => onEnter());
+    }
+    if (onLeave) {
+      div.addEventListener('mouseleave', () => onLeave());
     }
     const label = new CSS2DObject(div);
     label.position.copy(position);
@@ -1453,12 +1628,23 @@ export class CelestialGlobeModel {
 
         const conciseHtml = `${p.symbol} ${p.nameZh}`;
         const expandedHtml = `${p.symbol} ${p.nameZh} <small>${p.nameEn}</small>`;
+        const planetLabelHtml = `
+          <span class="const-label-text">${conciseHtml}</span>
+          <div class="const-hover-card">
+            <div class="hover-title"><span>${conciseHtml}</span><small>${p.nameEn}</small></div>
+            <div class="hover-meta">太陽系行星 ｜ 距離地球 ${p.distAU.toFixed(2)} AU</div>
+            <div class="hover-desc">赤經: ${formatRA(p.ra)} ｜ 赤緯: ${p.dec >= 0 ? '+' : ''}${p.dec.toFixed(1)}°</div>
+            <div class="hover-tip">💡 點擊以檢視行星詳細資訊</div>
+          </div>
+        `;
         const lbl = this._createLabel(
           new THREE.Vector3(),
-          conciseHtml,
+          planetLabelHtml,
           'celestial-label planet-label',
           this.dynamicBodiesGroup,
-          () => this.selectDynamicBody(p.id)
+          () => this.selectDynamicBody(p.id),
+          () => this.hoverBody(p.id),
+          () => this.clearHover()
         );
         this.planetMeshes[p.id] = { mesh, lbl, haloMesh };
         this.dynamicBodyMap[p.id] = {

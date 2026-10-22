@@ -53,7 +53,19 @@ export class SceneManager {
     this.solarTargetId = 'Sun';
     this.celestialViewMode = 'zenith-up'; // 'zenith-up' | 'horizon-top'
 
-    this.celestialModel = new CelestialGlobeModel((info) => this._handleObjectSelect(info));
+    this.celestialModel = new CelestialGlobeModel(
+      (info) => this._handleObjectSelect(info),
+      (info) => {
+        if (this.callbacks.onHoverObject) {
+          this.callbacks.onHoverObject(info);
+        }
+      },
+      () => {
+        if (this.callbacks.onClearHover) {
+          this.callbacks.onClearHover();
+        }
+      }
+    );
     this.solarModel = new SolarSystemModel((bodyId, info) => {
       if (bodyId) {
         this.setSolarTarget(bodyId);
@@ -92,6 +104,18 @@ export class SceneManager {
         return;
       }
       this._pickObject(e);
+    });
+
+    // 滑鼠懸停即時預覽星座/天體進一步資訊 (未拖曳時)
+    this.renderer.domElement.addEventListener('pointermove', (e) => {
+      if (this.controls.hasDragged || this.controls.dragState !== 'none') {
+        this.clearHover();
+        return;
+      }
+      this._onPointerHover(e);
+    });
+    this.renderer.domElement.addEventListener('pointerleave', () => {
+      this.clearHover();
     });
   }
 
@@ -171,6 +195,53 @@ export class SceneManager {
         this._handleObjectSelect(obj.userData);
       }
       break;
+    }
+  }
+
+  _onPointerHover(e) {
+    if (this.currentScale !== 'celestial' || !this.celestialModel) {
+      return;
+    }
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.mouseNDC, this.camera);
+
+    const hits = this.raycaster.intersectObjects(this.celestialModel.pickables, false);
+    for (let i = 0; i < hits.length; i++) {
+      const hit = hits[i];
+      if (this.celestialViewMode === 'horizon-top' && hit.point.y < -0.01) continue;
+      const obj = hit.object;
+      if (obj.userData) {
+        if (obj.userData.type === 'Star' && obj.userData.constellationId) {
+          this.hoverConstellation(obj.userData.constellationId);
+          return;
+        }
+        if (obj.userData.bodyId) {
+          this.hoverBody(obj.userData.bodyId);
+          return;
+        }
+      }
+      break;
+    }
+    this.clearHover();
+  }
+
+  hoverConstellation(constellationId) {
+    if (this.currentScale === 'celestial' && this.celestialModel) {
+      this.celestialModel.hoverConstellation(constellationId);
+    }
+  }
+
+  hoverBody(bodyId) {
+    if (this.currentScale === 'celestial' && this.celestialModel) {
+      this.celestialModel.hoverBody(bodyId);
+    }
+  }
+
+  clearHover() {
+    if (this.currentScale === 'celestial' && this.celestialModel) {
+      this.celestialModel.clearHover();
     }
   }
 
