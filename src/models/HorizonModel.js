@@ -113,6 +113,27 @@ export class HorizonModel {
   }
 
   _buildAltAzDomeGrid() {
+    // 半球天幕曲面包覆層 (Sky Dome Vault Mesh)：BackSide 半透明渲染，深度不遮蔽內部天體
+    const domeGeo = new THREE.SphereGeometry(
+      DOME_RADIUS,
+      64,
+      32,
+      0,
+      Math.PI * 2,
+      0,
+      Math.PI / 2
+    );
+    this.skyDomeMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.14,
+      side: THREE.BackSide,
+      depthWrite: false
+    });
+    this.skyDomeMesh = new THREE.Mesh(domeGeo, this.skyDomeMat);
+    this.skyDomeMesh.renderOrder = 2;
+    this.azGridGroup.add(this.skyDomeMesh);
+
     // 仰角圈 (30°, 60°)
     [30, 60].forEach((alt) => {
       const pts = [];
@@ -121,11 +142,11 @@ export class HorizonModel {
       }
       const geo = new THREE.BufferGeometry().setFromPoints(pts);
       const mat = new THREE.LineDashedMaterial({
-        color: 0x334155,
+        color: 0x94a3b8,
         dashSize: 2,
         gapSize: 1.5,
         transparent: true,
-        opacity: 0.5
+        opacity: 0.6
       });
       const line = new THREE.Line(geo, mat);
       line.computeLineDistances();
@@ -142,9 +163,9 @@ export class HorizonModel {
       }
       const geo = new THREE.BufferGeometry().setFromPoints(pts);
       const mat = new THREE.LineBasicMaterial({
-        color: baseAz === 0 ? 0x38bdf8 : 0x334155,
+        color: baseAz === 0 ? 0x38bdf8 : 0x94a3b8,
         transparent: true,
-        opacity: baseAz === 0 ? 0.5 : 0.35
+        opacity: baseAz === 0 ? 0.75 : 0.5
       });
       this.azGridGroup.add(new THREE.Line(geo, mat));
     });
@@ -498,6 +519,23 @@ export class HorizonModel {
 
     const sunAbove = ephemeris.sun.altitude >= 0;
     this.sunMesh.material.color.setHex(sunAbove ? 0xfacc15 : 0x9a3412);
+
+    // 視該地地理位置與實時太陽仰角：太陽在日落前是藍天，太陽在日落後是灰幕
+    if (this.skyDomeMat) {
+      if (sunAbove) {
+        this.skyDomeMat.color.setHex(0x38bdf8);
+        this.skyDomeMat.opacity = 0.14;
+      } else {
+        this.skyDomeMat.color.setHex(0x64748b);
+        this.skyDomeMat.opacity = 0.18;
+      }
+    }
+
+    // 太陽日落後地平面下停止發射強烈平行光，以月光與夜間環境光為主
+    if (this.sunLight) {
+      this.sunLight.intensity = sunAbove ? 2.8 : 0.0;
+    }
+
     this.sunMesh.userData = {
       type: 'HorizonBody',
       title: `☀ 太陽 (${sunAbove ? '地平線上 - 白晝' : '地平線下 - 夜晚'})`,

@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { CustomController } from './Controls.js?v=20261022_04';
-import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261022_04';
-import { SolarSystemModel } from '../models/SolarSystem.js?v=20261022_04';
-import { HorizonModel } from '../models/HorizonModel.js?v=20261022_04';
-import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261022_04';
+import { CustomController } from './Controls.js?v=20261023_01';
+import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261023_01';
+import { SolarSystemModel } from '../models/SolarSystem.js?v=20261023_01';
+import { HorizonModel } from '../models/HorizonModel.js?v=20261023_01';
+import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261023_01';
 
 export class SceneManager {
   constructor(container, callbacks) {
@@ -83,6 +83,33 @@ export class SceneManager {
 
     this.raycaster = new THREE.Raycaster();
     this.mouseNDC = new THREE.Vector2();
+
+    this.latestEphemeris = null;
+
+    // 天空背景紋理生成器 (用於 L3 地平日月模型：太陽日落前藍天、日落後灰幕)
+    this.skyCanvas = document.createElement('canvas');
+    this.skyCanvas.width = 16;
+    this.skyCanvas.height = 512;
+    this.skyCtx = this.skyCanvas.getContext('2d');
+    this.skyTexture = new THREE.CanvasTexture(this.skyCanvas);
+    this.skyTexture.colorSpace = THREE.SRGBColorSpace;
+    this._lastSkyFactor = -1;
+
+    // 深空宇宙背景紋理 (用於 L1 天球儀與 L2 太陽系模型)
+    this.spaceCanvas = document.createElement('canvas');
+    this.spaceCanvas.width = 16;
+    this.spaceCanvas.height = 512;
+    this.spaceCtx = this.spaceCanvas.getContext('2d');
+    const spaceGrad = this.spaceCtx.createLinearGradient(0, 0, 0, 512);
+    spaceGrad.addColorStop(0, '#060a15');
+    spaceGrad.addColorStop(0.5, '#0b1325');
+    spaceGrad.addColorStop(1, '#050811');
+    this.spaceCtx.fillStyle = spaceGrad;
+    this.spaceCtx.fillRect(0, 0, 16, 512);
+    this.spaceTexture = new THREE.CanvasTexture(this.spaceCanvas);
+    this.spaceTexture.colorSpace = THREE.SRGBColorSpace;
+
+    this.scene.background = this.spaceTexture;
 
     this.setScale('celestial');
     this._bindEvents();
@@ -310,7 +337,77 @@ export class SceneManager {
       this.celestialModel.setViewMode(this.celestialViewMode || 'zenith-up');
     }
 
+    this._updateSceneBackground();
     this.resetCameraForCurrentScale();
+  }
+
+  _updateSceneBackground() {
+    if (this.currentScale === 'horizon') {
+      this.scene.background = this.skyTexture;
+      this._renderHorizonSkyTexture();
+    } else {
+      this.scene.background = this.spaceTexture;
+    }
+  }
+
+  _renderHorizonSkyTexture() {
+    const sunAlt = this.latestEphemeris ? this.latestEphemeris.sun.altitude : 25;
+
+    // 依據該地理位置實時太陽仰角：
+    // 太陽在日落前 (sunAlt > 0) 為藍天，日落後 (sunAlt <= 0) 為灰幕
+    // 在地平線交界處 (-1.5° ~ +1.5°) 平滑過渡，提供自然真實的暮光銜接
+    const factor = THREE.MathUtils.clamp((sunAlt + 1.2) / 2.4, 0, 1);
+    if (Math.abs(factor - this._lastSkyFactor) < 0.002) return;
+    this._lastSkyFactor = factor;
+
+    const ctx = this.skyCtx;
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+
+    // 1. 藍天色彩調色盤 (Daytime Blue Sky - 太陽在日落前)：
+    // 天頂深邃天青藍 -> 中空清朗大氣藍 -> 地平柔和大氣淡藍
+    const dayTop = [25, 75, 155];       // #194b9b
+    const dayMid = [56, 135, 222];      // #3887de
+    const dayHorizon = [148, 205, 252];  // #94cdfc
+
+    // 2. 灰幕色彩調色盤 (After Sunset Grey Curtain - 太陽在日落後)：
+    // 天頂沉穩深灰石褐 -> 中空優雅石墨灰 -> 地平微灰暮色
+    const nightTop = [24, 28, 36];      // #181c24
+    const nightMid = [46, 54, 66];      // #2e3642
+    const nightHorizon = [78, 88, 102];  // #4e5866
+
+    // 日落/日出交界處地平微光餘暉 (Dusk Glow)
+    const sunsetDusk = Math.sin(factor * Math.PI) * 0.35;
+
+    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+    const topC = [
+      lerp(nightTop[0], dayTop[0], factor),
+      lerp(nightTop[1], dayTop[1], factor),
+      lerp(nightTop[2], dayTop[2], factor)
+    ];
+    const midC = [
+      lerp(nightMid[0], dayMid[0], factor),
+      lerp(nightMid[1], dayMid[1], factor),
+      lerp(nightMid[2], dayMid[2], factor)
+    ];
+    const horizonC = [
+      lerp(nightHorizon[0], dayHorizon[0], factor),
+      lerp(nightHorizon[1], dayHorizon[1], factor),
+      lerp(nightHorizon[2], dayHorizon[2], factor)
+    ];
+
+    const duskR = Math.round(sunsetDusk * 55);
+    const duskG = Math.round(sunsetDusk * 20);
+
+    const col = (c, rB = 0, gB = 0) =>
+      `rgb(${Math.min(255, c[0] + rB)}, ${Math.min(255, c[1] + gB)}, ${c[2]})`;
+
+    grad.addColorStop(0, col(topC));
+    grad.addColorStop(0.52, col(midC));
+    grad.addColorStop(1, col(horizonC, duskR, duskG));
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 512);
+    this.skyTexture.needsUpdate = true;
   }
 
   _setLabelsVisible(labelList, visible) {
@@ -328,6 +425,23 @@ export class SceneManager {
     const distV = fitRadius / tanHalfFov;
     const distH = fitRadius / (tanHalfFov * Math.max(0.5, aspect));
     return Math.max(distV, distH, 310);
+  }
+
+  _getHorizonFitPose() {
+    const aspect = this.container.clientWidth / (this.container.clientHeight || 1);
+    const halfFovRad = THREE.MathUtils.degToRad(this.camera.fov / 2);
+    const tanHalfFov = Math.tan(halfFovRad);
+    const fitRadius = 94; // 完整涵蓋 DOME_RADIUS=75、天頂 Zenith (Y=78)、日月標籤 (Y=79.2) 與四方方位標籤 (R=78)
+    const distV = fitRadius / tanHalfFov;
+    const distH = fitRadius / (tanHalfFov * Math.max(0.5, aspect));
+    const fitDist = Math.max(distV, distH, 212);
+
+    // 視角方向：經典南偏東南向西北俯瞰 (+X, +Y, +Z)，既能縱覽東升西落全弧線與天頂，又能看清中央日晷與國旗陰影
+    const dir = new THREE.Vector3(0.58, 0.38, 0.72).normalize();
+    const target = new THREE.Vector3(0, 10.0, 0);
+    const position = target.clone().addScaledVector(dir, fitDist);
+
+    return { position, target, fitDist };
   }
 
   resetCameraForCurrentScale() {
@@ -366,13 +480,13 @@ export class SceneManager {
         this._handleObjectSelect(sunItem.mesh.userData);
       }
     } else if (this.currentScale === 'horizon') {
-      // L3 地平日月模型預設視角：以觀測平臺中心偏低視角 (0, 2.0, 0) 為 target，
-      // 確保放大 (Zoom In) 時鏡頭聚焦於地基與日影，絕不飛向天空而丟失地面國旗陰影
-      this.controls.setCameraPose(
-        new THREE.Vector3(45, 28, 55),
-        new THREE.Vector3(0, 2.0, 0),
+      // L3 地平日月模型預設視角：Zoom to fit 完整納入全天球頂、地平盤、日月當日軌跡與所有方位標籤
+      const fitPose = this._getHorizonFitPose();
+      this.controls.setCameraPoseSmooth(
+        fitPose.position,
+        fitPose.target,
         1.5,
-        450
+        fitPose.fitDist * 3.5
       );
     }
   }
@@ -442,9 +556,14 @@ export class SceneManager {
   }
 
   updateEphemeris(ephemeris) {
+    this.latestEphemeris = ephemeris;
     this.celestialModel.update(ephemeris);
     this.solarModel.update(ephemeris);
     this.horizonModel.update(ephemeris);
+
+    if (this.currentScale === 'horizon') {
+      this._updateSceneBackground();
+    }
 
     // 若處於 Level 2 太陽系模式，讓相機中心持續跟隨所選行星或衛星
     if (this.currentScale === 'solar') {
