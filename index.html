@@ -243,7 +243,7 @@
         </div>
 
         <footer class="version-footer">
-          <span class="version-tag" id="app-version-tag">v0.5</span>
+          <span class="version-tag" id="app-version-tag">v0.6</span>
           <span class="version-repo">PD-CG · Celestial Globe</span>
         </footer>
       </section>
@@ -297,9 +297,12 @@
         </div>
       </div>
 
-      <!-- 底部快速導覽列 (L1: 黃道十二宮) -->
+      <!-- 底部快速導覽列 (L1: 黃道十二宮與著名星座) -->
       <div id="zodiac-quickbar">
-        <span class="quickbar-label">黃道十二宮：</span>
+        <div class="quickbar-tabs">
+          <button class="quickbar-tab active" id="tab-zodiac">黃道十二宮 (12)</button>
+          <button class="quickbar-tab" id="tab-other-const">著名星座 (18)</button>
+        </div>
         <div id="zodiac-pills" class="zodiac-pills"></div>
       </div>
 
@@ -329,6 +332,6 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js?v=20261025_02"></script>
+  <script type="module" src="./src/main.js?v=20261025_03"></script>
 </body>
 </html>

@@ -199,14 +199,15 @@ export const ZODIAC_CONSTELLATIONS = [
 ];
 
 /**
- * 其他重要全天指標星座（協助定位北天極、冬季與夏季大三角）
+ * 其他重要全天指標星座（北天拱極、春夏秋冬四季大三角與南天標誌星群，共 18 座）
  */
 export const OTHER_CONSTELLATIONS = [
   {
     id: 'UrsaMinor',
     nameZh: '小熊座（北極星）',
     nameEn: 'Ursa Minor',
-    desc: '包含北天極指標星「勾陳一 (Polaris)」。',
+    symbol: '🐻',
+    desc: '北天拱極核心星座，斗柄最端為北天極指標恆星「勾陳一（北極星 Polaris）」。',
     stars: [
       { name: '北極星 Polaris (α UMi)', ra: 2.53, dec: 89.26, mag: 1.98 },
       { name: '帝星 Kochab (β UMi)', ra: 14.84, dec: 74.16, mag: 2.07 },
@@ -219,7 +220,8 @@ export const OTHER_CONSTELLATIONS = [
     id: 'UrsaMajor',
     nameZh: '大熊座（北斗七星）',
     nameEn: 'Ursa Major',
-    desc: '北方天空最著名的北斗七星，斗口天樞、天璇連線延伸可找到北極星。',
+    symbol: '🌟',
+    desc: '北方天空最著名的北斗七星，斗口天樞與天璇兩星連線延伸 5 倍距離即可精準尋找北極星。',
     stars: [
       { name: '天樞 Dubhe (α UMa)', ra: 11.06, dec: 61.75, mag: 1.79 },
       { name: '天璇 Merak (β UMa)', ra: 11.03, dec: 56.38, mag: 2.37 },
@@ -232,10 +234,26 @@ export const OTHER_CONSTELLATIONS = [
     lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]]
   },
   {
+    id: 'Cassiopeia',
+    nameZh: '仙后座（W星群）',
+    nameEn: 'Cassiopeia',
+    symbol: '👑',
+    desc: '北方星空著名的「W」型拱極星座，與大熊座北斗七星隔著北極星遙遙相對，同為尋找北天極的核心天標。',
+    stars: [
+      { name: '王良四 Schedar (α Cas)', ra: 0.68, dec: 56.54, mag: 2.24 },
+      { name: '王良一 Caph (β Cas)', ra: 0.15, dec: 59.15, mag: 2.28 },
+      { name: '策 Gamma Cas (γ Cas)', ra: 0.94, dec: 60.72, mag: 2.15 },
+      { name: '閣道三 Ruchbah (δ Cas)', ra: 1.43, dec: 60.23, mag: 2.68 },
+      { name: '閣道二 Segin (ε Cas)', ra: 1.90, dec: 63.67, mag: 3.35 }
+    ],
+    lines: [[1, 0], [0, 2], [2, 3], [3, 4]]
+  },
+  {
     id: 'Orion',
     nameZh: '獵戶座',
     nameEn: 'Orion',
-    desc: '橫跨天球赤道的冬季星座之王，擁有參宿四、參宿七與獵戶腰帶三星。',
+    symbol: '🏹',
+    desc: '橫跨天球赤道的冬季星座之王，擁有紅超巨星參宿四、藍超巨星參宿七與著名的獵戶腰帶三星。',
     stars: [
       { name: '參宿四 Betelgeuse (α Ori)', ra: 5.92, dec: 7.41, mag: 0.50 },
       { name: '參宿七 Rigel (β Ori)', ra: 5.24, dec: -8.20, mag: 0.13 },
@@ -248,10 +266,72 @@ export const OTHER_CONSTELLATIONS = [
     lines: [[0, 4], [4, 3], [3, 5], [5, 2], [2, 0], [4, 6], [6, 1], [1, 5]]
   },
   {
+    id: 'CanisMajor',
+    nameZh: '大犬座（天狼星）',
+    nameEn: 'Canis Major',
+    symbol: '🐕',
+    desc: '冬季星空代表，主星「天狼星 (Sirius)」為全天肉眼可見最明亮的恆星（視星等 -1.46 等），亦為冬季大三角頂點。',
+    stars: [
+      { name: '天狼星 Sirius (α CMa)', ra: 6.75, dec: -16.72, mag: -1.46 },
+      { name: '弧矢七 Adhara (ε CMa)', ra: 6.98, dec: -28.97, mag: 1.50 },
+      { name: '弧矢二 Wezen (δ CMa)', ra: 7.14, dec: -26.39, mag: 1.83 },
+      { name: '軍市一 Murzim (β CMa)', ra: 6.38, dec: -17.96, mag: 1.98 },
+      { name: '弧矢一 Aludra (η CMa)', ra: 7.40, dec: -29.30, mag: 2.45 },
+      { name: '孫增一 Zeta CMa (ζ CMa)', ra: 6.34, dec: -30.06, mag: 3.02 }
+    ],
+    lines: [[3, 0], [0, 2], [2, 1], [1, 5], [2, 4]]
+  },
+  {
+    id: 'CanisMinor',
+    nameZh: '小犬座（南河三）',
+    nameEn: 'Canis Minor',
+    symbol: '🐩',
+    desc: '冬季大三角之一，主星南河三 (Procyon) 是一顆距離地球僅 11.4 光年的明亮黃白色一等星。',
+    stars: [
+      { name: '南河三 Procyon (α CMi)', ra: 7.65, dec: 5.22, mag: 0.38 },
+      { name: '南河二 Gomeisa (β CMi)', ra: 7.45, dec: 8.29, mag: 2.89 }
+    ],
+    lines: [[1, 0]]
+  },
+  {
+    id: 'Lyra',
+    nameZh: '天琴座（織女星）',
+    nameEn: 'Lyra',
+    symbol: '🎵',
+    desc: '夏季大三角最重要的成員，主星「織女一 (Vega)」為全天第五亮星，與牛郎星隔著銀河遙遙相望。',
+    stars: [
+      { name: '織女一 Vega (α Lyr)', ra: 18.62, dec: 38.78, mag: 0.03 },
+      { name: '漸台二 Sheliak (β Lyr)', ra: 18.83, dec: 33.36, mag: 3.52 },
+      { name: '漸台三 Sulafat (γ Lyr)', ra: 18.98, dec: 32.69, mag: 3.25 },
+      { name: '漸台一 Delta2 Lyr (δ2 Lyr)', ra: 18.91, dec: 36.90, mag: 4.22 },
+      { name: '織女三 Epsilon1 Lyr (ε1 Lyr)', ra: 18.74, dec: 39.67, mag: 4.67 },
+      { name: '織女二 Zeta1 Lyr (ζ1 Lyr)', ra: 18.75, dec: 37.60, mag: 4.34 }
+    ],
+    lines: [[0, 5], [5, 3], [3, 2], [2, 1], [1, 5], [0, 4]]
+  },
+  {
+    id: 'Aquila',
+    nameZh: '天鷹座（牛郎星）',
+    nameEn: 'Aquila',
+    symbol: '🦅',
+    desc: '夏季大三角頂點之一，主星「河鼓二（牛郎星 Altair）」與兩側扁擔星河鼓一、河鼓三宛如展翅翱翔的雄鷹。',
+    stars: [
+      { name: '河鼓二 Altair (α Aql)', ra: 19.85, dec: 8.87, mag: 0.77 },
+      { name: '河鼓一 Tarazed (γ Aql)', ra: 19.77, dec: 10.61, mag: 2.72 },
+      { name: '河鼓三 Alshain (β Aql)', ra: 19.92, dec: 6.41, mag: 3.71 },
+      { name: '天市左垣六 Delta Aql (δ Aql)', ra: 19.42, dec: 3.11, mag: 3.36 },
+      { name: '右旗三 Zeta Aql (ζ Aql)', ra: 19.09, dec: 13.86, mag: 2.99 },
+      { name: '天市左垣七 Theta Aql (θ Aql)', ra: 20.19, dec: -0.82, mag: 3.24 },
+      { name: '天市左垣八 Eta Aql (η Aql)', ra: 19.87, dec: 1.01, mag: 3.87 }
+    ],
+    lines: [[1, 0], [0, 2], [0, 3], [3, 4], [0, 6], [6, 5]]
+  },
+  {
     id: 'Cygnus',
-    nameZh: '天鵝座',
+    nameZh: '天鵝座（北十字）',
     nameEn: 'Cygnus',
-    desc: '銀河上的北十字，主星天津四為夏季大三角之一。',
+    symbol: '🦢',
+    desc: '座落於銀河之上的壯麗北十字，主星「天津四 (Deneb)」為夏季大三角最北端頂點，尾羽指向深邃銀河。',
     stars: [
       { name: '天津四 Deneb (α Cyg)', ra: 20.69, dec: 45.28, mag: 1.25 },
       { name: '天津一 Sadr (γ Cyg)', ra: 20.37, dec: 40.26, mag: 2.23 },
@@ -262,10 +342,105 @@ export const OTHER_CONSTELLATIONS = [
     lines: [[0, 1], [1, 2], [3, 1], [1, 4]]
   },
   {
+    id: 'Bootes',
+    nameZh: '牧夫座（大角星）',
+    nameEn: 'Boötes',
+    symbol: '🪁',
+    desc: '春季星空代表，主星「大角星 (Arcturus)」為全天第四亮、北天第一亮星。順著北斗七星斗柄開陽、搖光延伸之春季大弧線即可抵達。',
+    stars: [
+      { name: '大角星 Arcturus (α Boo)', ra: 14.26, dec: 19.18, mag: -0.05 },
+      { name: '梗河一 Izar (ε Boo)', ra: 14.75, dec: 27.07, mag: 2.35 },
+      { name: '七公增五 Muphrid (η Boo)', ra: 13.91, dec: 18.39, mag: 2.68 },
+      { name: '招搖 Seginus (γ Boo)', ra: 14.53, dec: 38.31, mag: 3.04 },
+      { name: '帝席一 Nekkar (β Boo)', ra: 15.03, dec: 40.39, mag: 3.49 },
+      { name: '梗河二 Delta Boo (δ Boo)', ra: 15.26, dec: 33.31, mag: 3.46 }
+    ],
+    lines: [[2, 0], [0, 1], [1, 5], [5, 4], [4, 3], [3, 1]]
+  },
+  {
+    id: 'Auriga',
+    nameZh: '御夫座（五車二）',
+    nameEn: 'Auriga',
+    symbol: '🛡',
+    desc: '冬季六邊形之一，主星「五車二 (Capella)」為全天第六亮星，全星座構成巨大鮮明的五邊形幾何輪廓。',
+    stars: [
+      { name: '五車二 Capella (α Aur)', ra: 5.28, dec: 45.99, mag: 0.08 },
+      { name: '五車三 Menkalinan (β Aur)', ra: 5.99, dec: 44.95, mag: 1.90 },
+      { name: '五車五 Elnath (β Tau)', ra: 5.44, dec: 28.61, mag: 1.65 },
+      { name: '五車四 Theta Aur (θ Aur)', ra: 5.99, dec: 37.21, mag: 2.65 },
+      { name: '五車一 Iota Aur (ι Aur)', ra: 4.95, dec: 33.17, mag: 2.69 }
+    ],
+    lines: [[0, 1], [1, 3], [3, 2], [2, 4], [4, 0]]
+  },
+  {
+    id: 'Pegasus',
+    nameZh: '飛馬座（秋季四邊形）',
+    nameEn: 'Pegasus',
+    symbol: '🐎',
+    desc: '秋季星空的標誌性骨架，由室宿一、室宿二、壁宿一與壁宿二組成顯眼的「秋季大四邊形」。',
+    stars: [
+      { name: '室宿一 Markab (α Peg)', ra: 23.08, dec: 15.21, mag: 2.49 },
+      { name: '室宿二 Scheat (β Peg)', ra: 23.06, dec: 28.08, mag: 2.44 },
+      { name: '壁宿一 Algenib (γ Peg)', ra: 0.22, dec: 15.18, mag: 2.84 },
+      { name: '壁宿二 Alpheratz (α And)', ra: 0.14, dec: 29.09, mag: 2.07 },
+      { name: '危宿三 Enif (ε Peg)', ra: 21.74, dec: 9.87, mag: 2.38 },
+      { name: '雷電二 Zeta Peg (ζ Peg)', ra: 22.69, dec: 10.83, mag: 3.41 }
+    ],
+    lines: [[0, 1], [1, 3], [3, 2], [2, 0], [0, 5], [5, 4]]
+  },
+  {
+    id: 'Andromeda',
+    nameZh: '仙女座（M31大星系）',
+    nameEn: 'Andromeda',
+    symbol: '👸',
+    desc: '與飛馬座相連的王族星座，包含肉眼可見的最遙遠深空天體——距地球約 250 萬光年的「仙女座大星系 (M31)」。',
+    stars: [
+      { name: '壁宿二 Alpheratz (α And)', ra: 0.14, dec: 29.09, mag: 2.07 },
+      { name: '奎宿九 Mirach (β And)', ra: 1.16, dec: 35.62, mag: 2.07 },
+      { name: '天大將軍一 Almach (γ And)', ra: 2.07, dec: 42.33, mag: 2.10 },
+      { name: '奎宿五 Delta And (δ And)', ra: 0.65, dec: 30.86, mag: 3.27 },
+      { name: '奎宿七 Mu And (μ And)', ra: 0.94, dec: 38.50, mag: 3.86 },
+      { name: '奎宿八 Nu And (ν And / 鄰近M31)', ra: 0.83, dec: 41.09, mag: 4.53 }
+    ],
+    lines: [[0, 3], [3, 1], [1, 2], [1, 4], [4, 5]]
+  },
+  {
+    id: 'Perseus',
+    nameZh: '英仙座',
+    nameEn: 'Perseus',
+    symbol: '⚔',
+    desc: '秋末初冬著名的英雄星座，每年八月英仙座流星雨輻射點所在，主星天船三與著名食變星大陵五 (Algol)。',
+    stars: [
+      { name: '天船三 Mirfak (α Per)', ra: 3.41, dec: 49.86, mag: 1.79 },
+      { name: '大陵五 Algol (β Per)', ra: 3.14, dec: 40.96, mag: 2.09 },
+      { name: '卷舌四 Epsilon Per (ε Per)', ra: 3.96, dec: 40.01, mag: 2.90 },
+      { name: '天船二 Gamma Per (γ Per)', ra: 3.08, dec: 53.51, mag: 2.91 },
+      { name: '卷舌二 Delta Per (δ Per)', ra: 3.72, dec: 47.79, mag: 3.01 },
+      { name: '卷舌三 Zeta Per (ζ Per)', ra: 3.90, dec: 31.88, mag: 2.84 }
+    ],
+    lines: [[3, 0], [0, 4], [4, 2], [2, 5], [0, 1]]
+  },
+  {
+    id: 'Cepheus',
+    nameZh: '仙王座',
+    nameEn: 'Cepheus',
+    symbol: '🏰',
+    desc: '北方拱極星座之一，輪廓呈尖頂房屋狀。主星造父一將於數千年後成為北極星；造父四為著名的造父變星原型（宇宙量天尺）。',
+    stars: [
+      { name: '少衛增八 Alderamin (α Cep)', ra: 21.31, dec: 62.59, mag: 2.45 },
+      { name: '上衛增一 Alfirk (β Cep)', ra: 21.48, dec: 70.56, mag: 3.23 },
+      { name: '造父一 Errai (γ Cep)', ra: 23.65, dec: 77.63, mag: 3.21 },
+      { name: '造父二 Zeta Cep (ζ Cep)', ra: 22.18, dec: 58.20, mag: 3.39 },
+      { name: '造父四 Delta Cep (δ Cep)', ra: 22.49, dec: 58.42, mag: 4.07 }
+    ],
+    lines: [[0, 1], [1, 2], [1, 3], [3, 4], [4, 0]]
+  },
+  {
     id: 'Crux',
     nameZh: '南十字座',
     nameEn: 'Crux',
-    desc: '南天極指標星座，由四顆亮星組成小巧明亮的十字形。',
+    symbol: '✝',
+    desc: '南天星空無可取代的象徵標誌，由四顆璀璨亮星構成明朗十字形，長軸延伸 4.5 倍精確直指南天極。',
     stars: [
       { name: '十字架二 Acrux (α Cru)', ra: 12.44, dec: -63.10, mag: 0.76 },
       { name: '十字架三 Mimosa (β Cru)', ra: 12.80, dec: -59.69, mag: 1.25 },
@@ -273,5 +448,50 @@ export const OTHER_CONSTELLATIONS = [
       { name: '十字架四 Imai (δ Cru)', ra: 12.25, dec: -58.75, mag: 2.79 }
     ],
     lines: [[2, 0], [1, 3]]
+  },
+  {
+    id: 'Centaurus',
+    nameZh: '半人馬座（南門二）',
+    nameEn: 'Centaurus',
+    symbol: '🏹',
+    desc: '南天最著名的龐大星座之一，擁有全天第三亮星、距離太陽系最近的恆星系統「南門二 (Alpha Centauri)」，以及藍白巨星馬腹一。',
+    stars: [
+      { name: '南門二 Rigil Kentaurus (α Cen)', ra: 14.66, dec: -60.83, mag: -0.27 },
+      { name: '馬腹一 Hadar (β Cen)', ra: 14.06, dec: -60.37, mag: 0.61 },
+      { name: '庫樓一 Menkent (θ Cen)', ra: 14.11, dec: -36.37, mag: 2.06 },
+      { name: '庫樓七 Gamma Cen (γ Cen)', ra: 12.69, dec: -48.96, mag: 2.20 },
+      { name: '庫樓三 Epsilon Cen (ε Cen)', ra: 13.67, dec: -53.47, mag: 2.29 },
+      { name: '庫樓二 Zeta Cen (ζ Cen)', ra: 13.92, dec: -47.29, mag: 2.55 }
+    ],
+    lines: [[0, 1], [1, 4], [4, 5], [5, 2], [4, 3]]
+  },
+  {
+    id: 'Carina',
+    nameZh: '船底座（老人星）',
+    nameEn: 'Carina',
+    symbol: '🚢',
+    desc: '南天銀河璀璨星座，主星「老人星 (Canopus)」為全天第二亮星（視星等 -0.74 等），自古被視為象徵吉祥與長壽的南極老人星。',
+    stars: [
+      { name: '老人星 Canopus (α Car)', ra: 6.40, dec: -52.70, mag: -0.74 },
+      { name: '海石一 Miaplacidus (β Car)', ra: 9.22, dec: -69.72, mag: 1.67 },
+      { name: '南船五 Avior (ε Car)', ra: 8.38, dec: -59.51, mag: 1.86 },
+      { name: '南船三 Aspidiske (ι Car)', ra: 9.28, dec: -59.28, mag: 2.21 }
+    ],
+    lines: [[0, 2], [2, 3], [3, 1]]
+  },
+  {
+    id: 'Corvus',
+    nameZh: '烏鴉座',
+    nameEn: 'Corvus',
+    symbol: '🐦',
+    desc: '春夜南方星空最清晰辨識的四邊形指標星座，四顆主星整齊醒目，有如夜空中的一扇明亮帆檣。',
+    stars: [
+      { name: '軫宿一 Gienah (γ Crv)', ra: 12.26, dec: -17.54, mag: 2.58 },
+      { name: '軫宿三 Kraz (β Crv)', ra: 12.57, dec: -23.40, mag: 2.65 },
+      { name: '軫宿二 Algorab (δ Crv)', ra: 12.50, dec: -16.52, mag: 2.94 },
+      { name: '軫宿四 Minkar (ε Crv)', ra: 12.17, dec: -22.62, mag: 3.02 },
+      { name: '右轄 Alchiba (α Crv)', ra: 12.14, dec: -24.73, mag: 4.02 }
+    ],
+    lines: [[0, 2], [2, 1], [1, 3], [3, 0], [3, 4]]
   }
 ];

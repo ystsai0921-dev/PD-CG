@@ -336,6 +336,102 @@ export const CELESTIAL_PHOTOS = {
         year: '2005'
       }
     ]
+  },
+
+  // 16. 著名亮恆星: 天琴座織女星 (Vega)
+  Vega: {
+    id: 'Vega',
+    nameZh: '織女星（織女一）',
+    nameEn: 'Vega',
+    photos: [
+      {
+        file: 'vega_1.jpg',
+        title: '史匹哲太空望遠鏡拍攝之織女星原行星塵埃盤紅外實景',
+        caption: 'NASA 史匹哲 (Spitzer) 太空望遠鏡在 24 與 70 微米波段拍攝之全天第五亮星「織女一 (Vega)」，周圍環繞著寬廣明亮的碎屑塵埃盤，揭示系外行星正在孕育形成。',
+        credit: 'NASA / JPL-Caltech / K. Su (Univ. of Arizona)',
+        year: '2005'
+      }
+    ]
+  },
+
+  // 17. 著名亮恆星: 天鷹座牛郎星 (Altair)
+  Altair: {
+    id: 'Altair',
+    nameZh: '牛郎星（河鼓二）',
+    nameEn: 'Altair',
+    photos: [
+      {
+        file: 'altair_1.jpg',
+        title: 'CHARA 陣列光學干涉儀直接成像之牛郎星扁平自轉實景',
+        caption: '密西根大學利用加州威爾遜山 CHARA 光學干涉陣列，首次對主序星牛郎星（河鼓二）表面直接成像，證實其因每秒 286 公里極速自轉導致赤道顯著凸起的扁橢球形體。',
+        credit: 'CHARA Array / University of Michigan (Monnier et al.)',
+        year: '2007'
+      }
+    ]
+  },
+
+  // 18. 著名亮恆星: 牧夫座大角星 (Arcturus)
+  Arcturus: {
+    id: 'Arcturus',
+    nameZh: '大角星',
+    nameEn: 'Arcturus',
+    photos: [
+      {
+        file: 'arcturus_1.jpg',
+        title: '大角星橙色巨星高解析度天文實景照片',
+        caption: '大角星 (Arcturus) 是全天第四亮、北天夜空第一亮星（視星等 -0.05 等），直徑約為太陽的 25 倍，是一顆步入演化晚期、燃燒氦核心的壯麗橘紅色巨星。',
+        credit: 'ESO / Digitized Sky Survey 2',
+        year: '2012'
+      }
+    ]
+  },
+
+  // 19. 著名亮恆星: 小熊座北極星 (Polaris)
+  Polaris: {
+    id: 'Polaris',
+    nameZh: '北極星（勾陳一）',
+    nameEn: 'Polaris',
+    photos: [
+      {
+        file: 'polaris_1.jpg',
+        title: '哈伯太空望遠鏡拍攝之北極星三重聚星系統實景',
+        caption: '哈伯先進巡天照相機 (ACS) 首次直接解析出勾陳一（北極星 Aa）與其極近伴星 Ab，右上方較遠處為 1779 年赫歇爾發現的伴星 Polaris B，證實北極星為壯麗的三合星系統。',
+        credit: 'NASA / ESA / N. Evans (CfA) / H. Bond (STScI)',
+        year: '2006'
+      }
+    ]
+  },
+
+  // 20. 著名亮恆星: 船底座老人星 (Canopus)
+  Canopus: {
+    id: 'Canopus',
+    nameZh: '老人星',
+    nameEn: 'Canopus',
+    photos: [
+      {
+        file: 'canopus_1.jpg',
+        title: '卡西尼號探測器於外太空導航時拍攝之老人星',
+        caption: '老人星 (Canopus) 是全天第二亮星（視星等 -0.74 等），光度高達太陽的 1 萬倍以上，中國古代視為南極仙翁長壽象徵，現代深空探測器（如航海家號、卡西尼號）常將其作為星光姿態導航的絕對基準。',
+        credit: 'NASA / JPL / Space Science Institute',
+        year: '2004'
+      }
+    ]
+  },
+
+  // 21. 著名亮恆星: 半人馬座南門二 (Alpha Centauri)
+  AlphaCentauri: {
+    id: 'AlphaCentauri',
+    nameZh: '南門二',
+    nameEn: 'Alpha Centauri',
+    photos: [
+      {
+        file: 'alphacen_1.jpg',
+        title: '南門二雙星系統與比鄰星真實天文攝影',
+        caption: '距離太陽系最近的恆星系統（僅 4.37 光年），南門二 A 與 B 雙星在天空中極其明亮，右上微弱紅光點為距離地球最近的恆星比鄰星 (Proxima Centauri，4.24 光年)。',
+        credit: 'ESO / Digitized Sky Survey 2 (Davide De Martin)',
+        year: '2016'
+      }
+    ]
   }
 };
 
@@ -384,7 +480,13 @@ export function getCelestialBodyPhotos(info) {
     { key: 'Europa', matches: ['木衛二', '歐羅巴', 'europa'] },
     { key: 'Titan', matches: ['土衛六', '泰坦', 'titan'] },
     { key: 'Betelgeuse', matches: ['參宿四', 'betelgeuse'] },
-    { key: 'Sirius', matches: ['天狼星', 'sirius'] }
+    { key: 'Sirius', matches: ['天狼星', 'sirius'] },
+    { key: 'Vega', matches: ['織女', 'vega'] },
+    { key: 'Altair', matches: ['牛郎', '河鼓二', 'altair'] },
+    { key: 'Arcturus', matches: ['大角星', 'arcturus'] },
+    { key: 'Polaris', matches: ['北極星', '勾陳一', 'polaris'] },
+    { key: 'Canopus', matches: ['老人星', 'canopus'] },
+    { key: 'AlphaCentauri', matches: ['南門二', 'alpha centauri', 'rigil kentaurus'] }
   ];
 
   for (const item of matchKeys) {

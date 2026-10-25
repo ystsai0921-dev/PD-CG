@@ -1,7 +1,7 @@
 import { SceneManager } from './core/SceneManager.js?v=20261023_01';
 import { SkyScreenView } from './models/SkyScreenView.js?v=20261023_01';
 import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261023_01';
-import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261023_01';
+import { ZODIAC_CONSTELLATIONS, OTHER_CONSTELLATIONS } from './data/zodiacData.js?v=20261025_02';
 import { getCelestialBodyPhotos, renderPhotoGalleryHtml, getPhotoUrl } from './data/celestialImages.js?v=20261025_02';
 
 // 應用程式全域狀態
@@ -66,6 +66,8 @@ const els = {
   btnResetCam: document.getElementById('btn-reset-cam'),
   toolbarHint: document.getElementById('toolbar-hint'),
   zodiacQuickbar: document.getElementById('zodiac-quickbar'),
+  tabZodiac: document.getElementById('tab-zodiac'),
+  tabOtherConst: document.getElementById('tab-other-const'),
   zodiacPills: document.getElementById('zodiac-pills'),
   planetQuickbar: document.getElementById('planet-quickbar'),
   planetPills: document.getElementById('planet-pills'),
@@ -158,15 +160,25 @@ function updateQuickbarActivePill(id) {
   });
 }
 
-// 建立 L1 底部黃道十二宮導覽按鈕
-function initZodiacQuickbar() {
+let currentL1ConstTab = 'zodiac';
+
+// 建立 L1 底部黃道十二宮與著名星座導覽按鈕
+function initZodiacQuickbar(mode = currentL1ConstTab) {
   if (!els.zodiacPills) return;
+  currentL1ConstTab = mode;
+  if (els.tabZodiac) els.tabZodiac.classList.toggle('active', mode === 'zodiac');
+  if (els.tabOtherConst) els.tabOtherConst.classList.toggle('active', mode === 'other');
+
   els.zodiacPills.innerHTML = '';
-  ZODIAC_CONSTELLATIONS.forEach((sign) => {
+  const list = mode === 'zodiac' ? ZODIAC_CONSTELLATIONS : OTHER_CONSTELLATIONS;
+  const isOther = mode === 'other';
+
+  list.forEach((sign) => {
     const btn = document.createElement('button');
-    btn.className = 'zodiac-pill';
+    btn.className = isOther ? 'zodiac-pill other-const-pill' : 'zodiac-pill';
     btn.dataset.id = sign.id;
-    btn.textContent = `${sign.symbol} ${sign.nameZh} ${sign.nameEn}`;
+    const sym = sign.symbol ? `${sign.symbol} ` : '✦ ';
+    btn.textContent = `${sym}${sign.nameZh} ${sign.nameEn}`;
     btn.addEventListener('click', () => {
       document.querySelectorAll('.zodiac-pill').forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
@@ -576,6 +588,14 @@ function bindUIEvents() {
   }
   if (els.btnSideHorizonTop) {
     els.btnSideHorizonTop.addEventListener('click', () => setL1ViewMode('horizon-top'));
+  }
+
+  // L1 底部黃道十二宮 vs 著名星座分頁標籤切換
+  if (els.tabZodiac) {
+    els.tabZodiac.addEventListener('click', () => initZodiacQuickbar('zodiac'));
+  }
+  if (els.tabOtherConst) {
+    els.tabOtherConst.addEventListener('click', () => initZodiacQuickbar('other'));
   }
 
   // 天體實景照片高清燈箱 (Lightbox) 關閉與按鍵事件

@@ -697,6 +697,39 @@ input:focus {
   display: none !important;
 }
 
+.quickbar-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.quickbar-tab {
+  padding: 2.5px 8px;
+  font-size: var(--fs-content);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.quickbar-tab:hover {
+  color: #f1f5f9;
+}
+
+.quickbar-tab.active {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
 .quickbar-label {
   font-size: var(--fs-subtitle);
   font-weight: 700;
@@ -731,6 +764,20 @@ input:focus {
   background: rgba(245, 158, 11, 0.3);
   border-color: var(--accent-gold);
   transform: translateY(-1px);
+}
+
+.zodiac-pill.other-const-pill {
+  background: rgba(15, 28, 48, 0.75);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #7dd3fc;
+}
+
+.zodiac-pill.other-const-pill:hover,
+.zodiac-pill.other-const-pill.active {
+  background: rgba(56, 189, 248, 0.32);
+  border-color: var(--accent-blue);
+  color: #f0f9ff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
 }
 
 .planet-pill {
