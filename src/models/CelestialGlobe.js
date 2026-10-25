@@ -990,10 +990,10 @@ export class CelestialGlobeModel {
         }
         // 核心：在選中星座背後顯現古典意象圖，並發出柔和星芒光輝 (受 showArtworkOption 開關控制)
         if (entry.artMesh) {
-          const showArt = this.showArtworkOption !== undefined ? this.showArtworkOption : true;
+          const showArt = this.showArtworkOption !== undefined ? Boolean(this.showArtworkOption) : true;
           entry.artMesh.visible = showArt;
           if (entry.artMesh.material) {
-            entry.artMesh.material.opacity = 0.85;
+            entry.artMesh.material.opacity = showArt ? 0.85 : 0;
             entry.artMesh.material.clippingPlanes = null;
             entry.artMesh.material.needsUpdate = true;
           }
@@ -1497,13 +1497,18 @@ export class CelestialGlobeModel {
         const entry = this.constellationMap[this.activeHighlight.constellationId];
         if (entry) {
           if (entry.artMesh && entry.artMesh.material) {
-            entry.artMesh.visible = true;
-            const targetArtOpacity = 0.82 + 0.08 * Math.sin(timeSec * 2.4);
-            entry.artMesh.material.opacity = THREE.MathUtils.lerp(
-              entry.artMesh.material.opacity,
-              targetArtOpacity,
-              0.15
-            );
+            const showArt = this.showArtworkOption !== undefined ? this.showArtworkOption : true;
+            entry.artMesh.visible = showArt;
+            if (showArt) {
+              const targetArtOpacity = 0.82 + 0.08 * Math.sin(timeSec * 2.4);
+              entry.artMesh.material.opacity = THREE.MathUtils.lerp(
+                entry.artMesh.material.opacity,
+                targetArtOpacity,
+                0.15
+              );
+            } else {
+              entry.artMesh.material.opacity = 0;
+            }
           }
           entry.lineMat.opacity = 0.45 + starPulse * 0.55;
           entry.lineMat.color.lerpColors(entry.baseLineColorObj, this.flashWhiteColor, starPulse * 0.7);
@@ -1941,13 +1946,16 @@ export class CelestialGlobeModel {
       }
     }
     if (options.constArtwork !== undefined) {
-      this.showArtworkOption = options.constArtwork;
-      if (isConstellationSelected && this.activeHighlight.constellationId) {
-        const entry = this.constellationMap[this.activeHighlight.constellationId];
-        if (entry && entry.artMesh) {
-          entry.artMesh.visible = this.showArtworkOption;
+      this.showArtworkOption = Boolean(options.constArtwork);
+      Object.values(this.constellationMap).forEach((entry) => {
+        if (entry.artMesh) {
+          const isSelected = isConstellationSelected && this.activeHighlight.constellationId === entry.c.id;
+          entry.artMesh.visible = isSelected && this.showArtworkOption;
+          if (!this.showArtworkOption && entry.artMesh.material) {
+            entry.artMesh.material.opacity = 0;
+          }
         }
-      }
+      });
     }
   }
 
