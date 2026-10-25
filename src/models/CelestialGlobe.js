@@ -9,39 +9,43 @@ import {
 } from '../utils/astronomy.js';
 import { createEarthTextures } from '../utils/earthTexture.js';
 
-export const CONSTELLATION_ART_MAP = {
-  Aries: 'aries.png',
-  Taurus: 'taurus.png',
-  Gemini: 'gemini.png',
-  Cancer: 'cancer.png',
-  Leo: 'leo.png',
-  Virgo: 'virgo.png',
-  Libra: 'libra.png',
-  Scorpius: 'scorpius.png',
-  Sagittarius: 'sagittarius.png',
-  Capricornus: 'capricornus.png',
-  Aquarius: 'aquarius.png',
-  Pisces: 'pisces.png',
-  UrsaMinor: 'ursa-minor.png',
-  UrsaMajor: 'ursa-major.png',
-  Cassiopeia: 'cassiopeia.png',
-  Orion: 'orion.png',
-  CanisMajor: 'canis-major.png',
-  CanisMinor: 'canis-minor.png',
-  Lyra: 'lyra.png',
-  Aquila: 'aquila.png',
-  Cygnus: 'cygnus.png',
-  Bootes: 'bootes.png',
-  Auriga: 'auriga.png',
-  Pegasus: 'pegasus.png',
-  Andromeda: 'andromeda.png',
-  Perseus: 'perseus.png',
-  Cepheus: 'cepheus.png',
-  Crux: 'crux.png',
-  Centaurus: 'centaurus.png',
-  Carina: 'argonavis.png',
-  Corvus: 'corvus.png'
+export const CONSTELLATION_ART_CONFIG = {
+  Aquila: { file: 'aquila.png', rotRad: 0.119, scale: 57.3 },
+  Andromeda: { file: 'andromeda.png', rotRad: 1.8916, scale: 57.6 },
+  Libra: { file: 'libra.png', rotRad: 1.0013, scale: 38.0 },
+  Aries: { file: 'aries.png', rotRad: 0.8898, scale: 35.0 },
+  Bootes: { file: 'bootes.png', rotRad: -1.0719, scale: 70.9 },
+  Cancer: { file: 'cancer.png', rotRad: -0.6372, scale: 42.0 },
+  Capricornus: { file: 'capricornus.png', rotRad: 0.6707, scale: 38.0 },
+  Carina: { file: 'argonavis.png', rotRad: 0.2686, scale: 89.1 },
+  Cassiopeia: { file: 'cassiopeia.png', rotRad: -3.129, scale: 42.0 },
+  Centaurus: { file: 'centaurus.png', rotRad: 0.4711, scale: 71.4 },
+  Cepheus: { file: 'cepheus.png', rotRad: 1.9138, scale: 55.4 },
+  Auriga: { file: 'auriga.png', rotRad: -0.9179, scale: 48.0 },
+  Corvus: { file: 'corvus.png', rotRad: 0.2208, scale: 26.0 },
+  Crux: { file: 'crux.png', rotRad: -0.8775, scale: 22.0 },
+  Cygnus: { file: 'cygnus.png', rotRad: -0.1495, scale: 55.6 },
+  Gemini: { file: 'gemini.png', rotRad: -0.3234, scale: 44.0 },
+  CanisMajor: { file: 'canis-major.png', rotRad: -0.3692, scale: 42.0 },
+  UrsaMajor: { file: 'ursa-major.png', rotRad: -0.7283, scale: 85.0 },
+  Leo: { file: 'leo.png', rotRad: 0.7031, scale: 61.4 },
+  Lyra: { file: 'lyra.png', rotRad: 0.3002, scale: 26.0 },
+  Orion: { file: 'orion.png', rotRad: 0.4711, scale: 52.0 },
+  Pegasus: { file: 'pegasus.png', rotRad: 2.476, scale: 78.7 },
+  Perseus: { file: 'perseus.png', rotRad: -0.2026, scale: 52.0 },
+  CanisMinor: { file: 'canis-minor.png', rotRad: -0.2699, scale: 28.0 },
+  UrsaMinor: { file: 'ursa-minor.png', rotRad: 1.4637, scale: 35.0 },
+  Pisces: { file: 'pisces.png', rotRad: 0.6606, scale: 70.8 },
+  Sagittarius: { file: 'sagittarius.png', rotRad: 0.488, scale: 52.0 },
+  Scorpius: { file: 'scorpius.png', rotRad: -0.0217, scale: 48.0 },
+  Taurus: { file: 'taurus.png', rotRad: -0.3605, scale: 58.1 },
+  Aquarius: { file: 'aquarius.png', rotRad: 0.6697, scale: 64.6 },
+  Virgo: { file: 'virgo.png', rotRad: 0.6022, scale: 77.4 }
 };
+
+export const CONSTELLATION_ART_MAP = Object.fromEntries(
+  Object.entries(CONSTELLATION_ART_CONFIG).map(([k, v]) => [k, v.file])
+);
 
 const GLOBE_RADIUS = 100;
 const EARTH_RADIUS = 6.48; // 地球模型大小縮小 10% (原 7.2 -> 6.48)
@@ -499,12 +503,16 @@ export class CelestialGlobeModel {
       const dist = starPos.distanceTo(centerSpherePos);
       if (dist > maxSpread) maxSpread = dist;
 
-      // 將各恆星標籤往星群外圍微幅扇形推開，避免相鄰恆星名字標籤重疊
-      const outward = new THREE.Vector3().subVectors(starPos, centerSpherePos);
-      if (outward.lengthSq() > 0.01) {
-        outward.normalize().multiplyScalar(1.6);
+      // 將各恆星標籤往星群外圍大幅扇形推開，徹底避開恆星本體與星座連線
+      let outward = new THREE.Vector3().subVectors(starPos, centerSpherePos);
+      const normalStar = starPos.clone().normalize();
+      outward.sub(normalStar.clone().multiplyScalar(outward.dot(normalStar)));
+      if (outward.lengthSq() > 1e-4) {
+        outward.normalize().multiplyScalar(6.5);
+      } else {
+        outward.set(0, 5.5, 0);
       }
-      sEntry.detailLabel.position.copy(starPos.clone().multiplyScalar(1.015).add(outward));
+      sEntry.detailLabel.position.copy(starPos.clone().multiplyScalar(1.025).add(outward));
     });
 
     // 預設天球距離約 228，適度 Zoom-in 距離介於 145 ~ 168（視星群跨距自動調整）
@@ -565,15 +573,15 @@ export class CelestialGlobeModel {
     c.labelObject = labelObj;
 
     // 建立星座背後 3D 古典意象插圖網格 (Constellation Artwork Mesh)
-    const artFilename = CONSTELLATION_ART_MAP[c.id];
+    const artCfg = CONSTELLATION_ART_CONFIG[c.id];
     let artMesh = null;
     let artMat = null;
 
-    if (artFilename) {
-      const artSize = Math.max(48, Math.min(115, maxSpread * 2.35 + 14));
+    if (artCfg) {
+      const artSize = artCfg.scale || Math.max(48, Math.min(115, maxSpread * 2.35 + 14));
       const artGeo = new THREE.PlaneGeometry(artSize, artSize);
 
-      const texture = this.textureLoader.load(`./public/images/constellations/${artFilename}`);
+      const texture = this.textureLoader.load(`./public/images/constellations/${artCfg.file}`);
 
       const artColorHex = isZodiac ? 0xfef08a : 0x7dd3fc;
       artMat = new THREE.MeshBasicMaterial({
@@ -603,6 +611,15 @@ export class CelestialGlobeModel {
       const rightVec = new THREE.Vector3().crossVectors(upVec, normal).normalize();
       const basisMat = new THREE.Matrix4().makeBasis(rightVec, upVec, normal);
       artMesh.quaternion.setFromRotationMatrix(basisMat);
+
+      // 水平鏡像翻轉（因天球儀係由球外向球心俯視，東西方位相對於地表仰望呈現鏡像）
+      artMesh.scale.set(-1, 1, 1);
+
+      // 套用 Stellarium 標準參考恆星錨點計算出的精確旋轉角，使意象圖神話輪廓與星體排列角度嚴格一致
+      if (artCfg.rotRad) {
+        artMesh.rotateZ(artCfg.rotRad);
+      }
+
       artMesh.visible = false;
       cGroup.add(artMesh);
     }
