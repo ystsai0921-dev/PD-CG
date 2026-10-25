@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { CustomController } from './Controls.js?v=20261023_01';
-import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261023_01';
+import { CustomController } from './Controls.js?v=20261025_06';
+import { CelestialGlobeModel } from '../models/CelestialGlobe.js?v=20261025_06';
 import { SolarSystemModel } from '../models/SolarSystem.js?v=20261023_01';
 import { HorizonModel } from '../models/HorizonModel.js?v=20261023_01';
 import { ZODIAC_CONSTELLATIONS } from '../data/zodiacData.js?v=20261023_01';

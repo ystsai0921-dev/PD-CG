@@ -22,7 +22,7 @@ export class CustomController {
     this.minDistance = 2;
     this.maxDistance = 1200;
     this.rotateSpeed = 0.0065;
-    this.zoomSpeed = 1.12;
+    this.zoomSpeed = 0.72; // 調小滾輪縮放靈敏度，手感更細緻穩定
 
     // 左鍵輔助模式: 'none' | 'orbit' | 'pan'
     this.leftClickMode = 'none';
@@ -217,11 +217,21 @@ export class CustomController {
     e.preventDefault();
     this.animTargetSpherical = null;
     this.animTargetCenter = null;
-    if (e.deltaY < 0) {
-      this.spherical.radius = Math.max(this.minDistance, this.spherical.radius / this.zoomSpeed);
-    } else if (e.deltaY > 0) {
-      this.spherical.radius = Math.min(this.maxDistance, this.spherical.radius * this.zoomSpeed);
+
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) {
+      delta *= 16;
+    } else if (e.deltaMode === 2) {
+      delta *= 100;
     }
+
+    // 限制單次事件最大幅度，避免高階滾輪或觸控板快速滾動瞬間衝過頭
+    delta = Math.max(-100, Math.min(100, delta));
+
+    // 細緻平滑縮放計算：大幅調小靈敏度，每次滾輪段落約平穩縮放 2.5% ~ 3%
+    const factor = Math.pow(0.965, -delta * 0.01 * this.zoomSpeed);
+    const newRadius = this.spherical.radius * factor;
+    this.spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, newRadius));
   }
 
   update() {

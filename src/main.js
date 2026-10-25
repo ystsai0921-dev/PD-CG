@@ -1,4 +1,4 @@
-import { SceneManager } from './core/SceneManager.js?v=20261025_05';
+import { SceneManager } from './core/SceneManager.js?v=20261025_06';
 import { SkyScreenView } from './models/SkyScreenView.js?v=20261025_05';
 import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261025_05';
 import { ZODIAC_CONSTELLATIONS, OTHER_CONSTELLATIONS } from './data/zodiacData.js?v=20261025_05';
