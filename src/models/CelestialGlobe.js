@@ -12,35 +12,35 @@ import { createEarthTextures } from '../utils/earthTexture.js';
 export const CONSTELLATION_ART_CONFIG = {
   Aquila: { file: 'aquila.png', rotRad: 0.119, scale: 57.3 },
   Andromeda: { file: 'andromeda.png', rotRad: 1.8916, scale: 57.6 },
-  Libra: { file: 'libra.png', rotRad: 1.0013, scale: 38.0 },
+  Libra: { file: 'libra.png', rotRad: -2.1403, scale: 38.0 },
   Aries: { file: 'aries.png', rotRad: 0.8898, scale: 35.0 },
   Bootes: { file: 'bootes.png', rotRad: -1.0719, scale: 70.9 },
   Cancer: { file: 'cancer.png', rotRad: -0.6372, scale: 42.0 },
   Capricornus: { file: 'capricornus.png', rotRad: 0.6707, scale: 38.0 },
-  Carina: { file: 'argonavis.png', rotRad: 0.2686, scale: 89.1 },
-  Cassiopeia: { file: 'cassiopeia.png', rotRad: -3.129, scale: 42.0 },
+  Carina: { file: 'argonavis.png', rotRad: -2.873, scale: 89.1 },
+  Cassiopeia: { file: 'cassiopeia.png', rotRad: 0.0126, scale: 42.0 },
   Centaurus: { file: 'centaurus.png', rotRad: 0.4711, scale: 71.4 },
   Cepheus: { file: 'cepheus.png', rotRad: 1.9138, scale: 55.4 },
   Auriga: { file: 'auriga.png', rotRad: -0.9179, scale: 48.0 },
   Corvus: { file: 'corvus.png', rotRad: 0.2208, scale: 26.0 },
   Crux: { file: 'crux.png', rotRad: -0.8775, scale: 22.0 },
-  Cygnus: { file: 'cygnus.png', rotRad: -0.1495, scale: 55.6 },
+  Cygnus: { file: 'cygnus.png', rotRad: 2.9921, scale: 55.6 },
   Gemini: { file: 'gemini.png', rotRad: -0.3234, scale: 44.0 },
   CanisMajor: { file: 'canis-major.png', rotRad: -0.3692, scale: 42.0 },
   UrsaMajor: { file: 'ursa-major.png', rotRad: -0.7283, scale: 85.0 },
-  Leo: { file: 'leo.png', rotRad: 0.7031, scale: 61.4 },
-  Lyra: { file: 'lyra.png', rotRad: 0.3002, scale: 26.0 },
+  Leo: { file: 'leo.png', rotRad: -2.4385, scale: 61.4 },
+  Lyra: { file: 'lyra.png', rotRad: -2.8414, scale: 26.0 },
   Orion: { file: 'orion.png', rotRad: 0.4711, scale: 52.0 },
   Pegasus: { file: 'pegasus.png', rotRad: 2.476, scale: 78.7 },
   Perseus: { file: 'perseus.png', rotRad: -0.2026, scale: 52.0 },
   CanisMinor: { file: 'canis-minor.png', rotRad: -0.2699, scale: 28.0 },
-  UrsaMinor: { file: 'ursa-minor.png', rotRad: 1.4637, scale: 35.0 },
+  UrsaMinor: { file: 'ursa-minor.png', rotRad: -1.6779, scale: 35.0 },
   Pisces: { file: 'pisces.png', rotRad: 0.6606, scale: 70.8 },
   Sagittarius: { file: 'sagittarius.png', rotRad: 0.488, scale: 52.0 },
   Scorpius: { file: 'scorpius.png', rotRad: -0.0217, scale: 48.0 },
   Taurus: { file: 'taurus.png', rotRad: -0.3605, scale: 58.1 },
   Aquarius: { file: 'aquarius.png', rotRad: 0.6697, scale: 64.6 },
-  Virgo: { file: 'virgo.png', rotRad: 0.6022, scale: 77.4 }
+  Virgo: { file: 'virgo.png', rotRad: -2.5394, scale: 77.4 }
 };
 
 export const CONSTELLATION_ART_MAP = Object.fromEntries(
@@ -124,6 +124,7 @@ export class CelestialGlobeModel {
     this.isHorizonTop = false;
     this.showLabelsOption = true;
     this.showHorizonOption = true;
+    this.showArtworkOption = true;
     this.currentEphemeris = null;
     this.horizonClipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
@@ -987,9 +988,10 @@ export class CelestialGlobeModel {
             }
           });
         }
-        // 核心：在選中星座背後顯現古典意象圖，並發出柔和星芒光輝
+        // 核心：在選中星座背後顯現古典意象圖，並發出柔和星芒光輝 (受 showArtworkOption 開關控制)
         if (entry.artMesh) {
-          entry.artMesh.visible = true;
+          const showArt = this.showArtworkOption !== undefined ? this.showArtworkOption : true;
+          entry.artMesh.visible = showArt;
           if (entry.artMesh.material) {
             entry.artMesh.material.opacity = 0.85;
             entry.artMesh.material.clippingPlanes = null;
@@ -1936,6 +1938,15 @@ export class CelestialGlobeModel {
         this.updateHorizonClippedLabels();
       } else {
         this._restoreAllLabelsVisibility();
+      }
+    }
+    if (options.constArtwork !== undefined) {
+      this.showArtworkOption = options.constArtwork;
+      if (isConstellationSelected && this.activeHighlight.constellationId) {
+        const entry = this.constellationMap[this.activeHighlight.constellationId];
+        if (entry && entry.artMesh) {
+          entry.artMesh.visible = this.showArtworkOption;
+        }
       }
     }
   }

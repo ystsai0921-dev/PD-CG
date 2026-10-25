@@ -569,6 +569,7 @@ function bindUIEvents() {
   bindCheck('chk-other-const', 'otherConst');
   bindCheck('chk-horizon-plane', 'horizonPlane');
   bindCheck('chk-labels', 'labels');
+  bindCheck('chk-const-artwork', 'constArtwork');
 
   // L2 太陽系視點切換與圖層
   els.selectSolarTarget.addEventListener('change', (e) => {
