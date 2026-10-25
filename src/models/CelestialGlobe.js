@@ -119,6 +119,7 @@ export class CelestialGlobeModel {
     this.earthMesh = new THREE.Mesh(geo, mat);
     this.earthMesh.userData = {
       type: 'Body',
+      bodyId: 'Earth',
       title: '🌍 地球 (Earth - 天球中心)',
       subtitle: 'Geocentric Celestial Center',
       details: '地球位於天球正中央，自轉姿態與格林威治恆星時 (GST)、太陽照射方向及觀測者經緯度完全同步。'
@@ -1549,6 +1550,7 @@ export class CelestialGlobeModel {
 
     this.earthMesh.userData = {
       type: 'Body',
+      bodyId: 'Earth',
       title: '🌍 地球 (Earth - 天球中心)',
       subtitle: `觀測點 (${ephemeris.lat.toFixed(2)}°N, ${ephemeris.lon.toFixed(2)}°E) | 地方恆星時 ${formatRA(ephemeris.lstHours)}`,
       details: `格林威治恆星時 GST: ${formatRA(ephemeris.gstHours)}\n地球自轉姿態與日照晝夜半球完全依據目前輸入的日期時間與經緯度即時計算。`

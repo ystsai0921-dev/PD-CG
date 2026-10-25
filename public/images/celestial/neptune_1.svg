@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="nepGrad" cx="42%" cy="40%" r="58%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="40%" stop-color="#3b82f6"/>
+      <stop offset="80%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#020308"/>
+  <circle cx="300" cy="200" r="120" fill="url(#nepGrad)"/>
+  <ellipse cx="260" cy="180" rx="26" ry="15" fill="#0f172a" stroke="#1e40af" stroke-width="2"/>
+  <path d="M220,165 Q250,155 285,170" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M310,225 Q350,220 380,235" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <text x="20" y="380" fill="#93c5fd" font-size="14" font-family="sans-serif" opacity="0.9">航海家 2 號 Voyager 2 · 海王星蔚藍深邃大氣與大黑斑氣旋</text>
+</svg>

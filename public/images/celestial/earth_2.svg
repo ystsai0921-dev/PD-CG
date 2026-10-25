@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="issView" cx="50%" cy="130%" r="90%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="60%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </radialGradient>
+    <linearGradient id="aurora" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#4ade80" stop-opacity="0.85"/>
+      <stop offset="70%" stop-color="#2dd4bf" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="#000000"/>
+  <path d="M-50,260 Q300,180 650,260 L650,450 L-50,450 Z" fill="url(#issView)"/>
+  <path d="M-50,256 Q300,176 650,256" stroke="#38bdf8" stroke-width="4" fill="none" opacity="0.8"/>
+  <path d="M80,240 Q250,160 480,210 Q380,180 200,230 Z" fill="url(#aurora)"/>
+  <circle cx="200" cy="270" r="1.5" fill="#fde047" opacity="0.8"/>
+  <circle cx="250" cy="280" r="2" fill="#fde047" opacity="0.8"/>
+  <circle cx="320" cy="275" r="2.5" fill="#fde047" opacity="0.9"/>
+  <circle cx="420" cy="290" r="2" fill="#fde047" opacity="0.8"/>
+  <text x="20" y="380" fill="#86efac" font-size="14" font-family="sans-serif" opacity="0.9">國際太空站 ISS 實景 · 地球大氣光圈、夜間極光與城市燈火</text>
+</svg>

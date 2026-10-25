@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="siriusGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="20%" stop-color="#e0f2fe"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="80%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#082f49"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#010307"/>
+  <line x1="100" y1="200" x2="500" y2="200" stroke="#bae6fd" stroke-width="2.5" opacity="0.85"/>
+  <line x1="300" y1="30" x2="300" y2="370" stroke="#bae6fd" stroke-width="2.5" opacity="0.85"/>
+  <circle cx="300" cy="200" r="65" fill="url(#siriusGlow)"/>
+  <circle cx="300" cy="200" r="22" fill="#ffffff"/>
+  <circle cx="370" cy="245" r="4" fill="#ffffff"/>
+  <circle cx="370" cy="245" r="7" fill="none" stroke="#38bdf8" stroke-width="1"/>
+  <text x="20" y="380" fill="#bae6fd" font-size="14" font-family="sans-serif" opacity="0.9">哈伯望遠鏡 · 全天最亮恆星天狼星 A 與白矮星伴星天狼星 B</text>
+</svg>

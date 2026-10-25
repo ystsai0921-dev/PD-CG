@@ -538,6 +538,7 @@ export class HorizonModel {
 
     this.sunMesh.userData = {
       type: 'HorizonBody',
+      bodyId: 'Sun',
       title: `☀ 太陽 (${sunAbove ? '地平線上 - 白晝' : '地平線下 - 夜晚'})`,
       subtitle: `仰角 Altitude: ${ephemeris.sun.altitude.toFixed(2)}° | 方位角 Azimuth: ${ephemeris.sun.azimuth.toFixed(2)}°`,
       details: `觀測地點 (${ephemeris.lat.toFixed(2)}°, ${ephemeris.lon.toFixed(2)}°) 實時地平座標。\n黃道宮位：${ephemeris.sun.zodiac.symbol} ${ephemeris.sun.zodiac.nameZh} (${ephemeris.sun.zodiac.nameEn})`
@@ -564,6 +565,7 @@ export class HorizonModel {
     const moonAbove = ephemeris.moon.altitude >= 0;
     this.moonMesh.userData = {
       type: 'HorizonBody',
+      bodyId: 'Moon',
       title: `🌙 月球 (${moonAbove ? '地平線上可見' : '地平線下'})`,
       subtitle: `仰角 Altitude: ${ephemeris.moon.altitude.toFixed(2)}° | 方位角 Azimuth: ${ephemeris.moon.azimuth.toFixed(2)}°`,
       details: `月相：${ephemeris.moon.phaseName} | 照明率 ${(ephemeris.moon.fraction * 100).toFixed(1)}%\n潮汐鎖定：月球正面（風暴洋、雨海、澄海、靜海、危海與第谷坑）固定朝向地球觀測者。`

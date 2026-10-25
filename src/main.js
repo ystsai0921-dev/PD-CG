@@ -2,6 +2,7 @@ import { SceneManager } from './core/SceneManager.js?v=20261023_01';
 import { SkyScreenView } from './models/SkyScreenView.js?v=20261023_01';
 import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261023_01';
 import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261023_01';
+import { getCelestialBodyPhotos, renderPhotoGalleryHtml } from './data/celestialImages.js?v=20261025_01';
 
 // 應用程式全域狀態
 const state = {
@@ -67,7 +68,18 @@ const els = {
   zodiacQuickbar: document.getElementById('zodiac-quickbar'),
   zodiacPills: document.getElementById('zodiac-pills'),
   planetQuickbar: document.getElementById('planet-quickbar'),
-  planetPills: document.getElementById('planet-pills')
+  planetPills: document.getElementById('planet-pills'),
+
+  // 高解析度天體實景相片燈箱 (Lightbox)
+  lightbox: {
+    root: document.getElementById('celestial-lightbox'),
+    backdrop: document.getElementById('lightbox-backdrop'),
+    closeBtn: document.getElementById('lightbox-close'),
+    img: document.getElementById('lightbox-img'),
+    title: document.getElementById('lightbox-title'),
+    caption: document.getElementById('lightbox-caption'),
+    credit: document.getElementById('lightbox-credit')
+  }
 };
 
 const defaultSelectionTipHtml =
@@ -326,16 +338,76 @@ function updateControlModeUI(mode) {
   }
 }
 
-// 更新左下角選取天體/星座資訊
-function renderSelectionInfo(info) {
+// 開啟天體實景相片高解析度燈箱 (Lightbox)
+function openCelestialLightbox(photo) {
+  if (!els.lightbox.root || !photo) return;
+  els.lightbox.img.src = photo.url;
+  els.lightbox.img.dataset.triedLocal = '';
+  els.lightbox.img.onerror = () => {
+    if (!els.lightbox.img.dataset.triedLocal) {
+      els.lightbox.img.dataset.triedLocal = '1';
+      els.lightbox.img.src = photo.localUrl;
+    }
+  };
+  els.lightbox.title.textContent = photo.title || '';
+  els.lightbox.caption.textContent = photo.caption || '';
+  els.lightbox.credit.textContent = photo.credit
+    ? `拍攝任務 / 機構：${photo.credit}${photo.year ? ` · ${photo.year}` : ''}`
+    : '';
+  els.lightbox.root.classList.remove('hidden');
+}
+
+// 關閉天體實景相片燈箱
+function closeCelestialLightbox() {
+  if (!els.lightbox.root) return;
+  els.lightbox.root.classList.add('hidden');
+}
+
+// 更新左下角選取天體/星座資訊（若為星體則嵌入一張以上的高畫質實景照片相簿）
+function renderSelectionInfo(info, activePhotoIdx = 0) {
   if (!info) return;
   const lines = info.details ? info.details.replace(/\n/g, '<br/>') : '';
   const extra = info.extraHtml || '';
+
+  // 檢查選取物件是否為星體，若是則取得一張以上的真實實景照片資料庫
+  const bodyPhotos = getCelestialBodyPhotos(info);
+  let galleryHtml = '';
+  if (bodyPhotos) {
+    galleryHtml = renderPhotoGalleryHtml(bodyPhotos, activePhotoIdx);
+  }
+
   els.selectionDetails.innerHTML = `
     <div class="sel-title">${info.title}</div>
     <div class="sel-sub">${info.subtitle || ''}</div>
+    ${galleryHtml}
     <div class="sel-body">${lines}${extra}</div>
   `;
+
+  // 綁定照片相簿切換與大圖預覽事件
+  if (bodyPhotos && bodyPhotos.photos && bodyPhotos.photos.length > 0) {
+    const card = els.selectionDetails.querySelector('.cg-photo-card');
+    if (card) {
+      // 點擊縮圖/上一張/下一張切換按鈕
+      card.querySelectorAll('.cg-pill, .cg-nav-arrow').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const nextIdx = parseInt(btn.dataset.idx, 10) || 0;
+          renderSelectionInfo(info, nextIdx);
+        });
+      });
+
+      // 點擊照片視窗或放大提示開啟高解析度 Lightbox 燈箱
+      const viewport = card.querySelector('.cg-photo-viewport');
+      if (viewport) {
+        viewport.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const currentIdx = parseInt(card.dataset.currentIdx, 10) || 0;
+          const p = bodyPhotos.photos[currentIdx] || bodyPhotos.photos[0];
+          openCelestialLightbox(p);
+        });
+      }
+    }
+  }
 }
 
 // 計算天文曆表並更新 3D 模型、平面天幕與左下資訊欄
@@ -448,6 +520,11 @@ function bindUIEvents() {
   els.selectSolarTarget.addEventListener('change', (e) => {
     sceneManager.setSolarTarget(e.target.value);
     updateQuickbarActivePill(e.target.value);
+    const item = sceneManager.solarModel.bodyMap[e.target.value];
+    if (item && item.mesh && item.mesh.userData) {
+      selectedObjectInfo = item.mesh.userData;
+      renderSelectionInfo(item.mesh.userData);
+    }
   });
   document.getElementById('chk-orbits').addEventListener('change', (e) => {
     sceneManager.solarModel.setOptions({ orbits: e.target.checked });
@@ -499,6 +576,20 @@ function bindUIEvents() {
   if (els.btnSideHorizonTop) {
     els.btnSideHorizonTop.addEventListener('click', () => setL1ViewMode('horizon-top'));
   }
+
+  // 天體實景照片高清燈箱 (Lightbox) 關閉與按鍵事件
+  if (els.lightbox.closeBtn) {
+    els.lightbox.closeBtn.addEventListener('click', closeCelestialLightbox);
+  }
+  if (els.lightbox.backdrop) {
+    els.lightbox.backdrop.addEventListener('click', closeCelestialLightbox);
+  }
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && els.lightbox.root && !els.lightbox.root.classList.contains('hidden')) {
+      closeCelestialLightbox();
+      e.stopPropagation();
+    }
+  });
 }
 
 // 時間推進動畫迴圈

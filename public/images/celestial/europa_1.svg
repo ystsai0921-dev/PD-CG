@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="euGrad" cx="42%" cy="40%" r="58%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="45%" stop-color="#e0f2fe"/>
+      <stop offset="80%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#020306"/>
+  <circle cx="300" cy="200" r="115" fill="url(#euGrad)"/>
+  <path d="M195,160 Q260,190 390,150 T410,210" fill="none" stroke="#9a3412" stroke-width="2.5" opacity="0.75"/>
+  <path d="M220,230 Q310,210 380,260" fill="none" stroke="#7c2d12" stroke-width="2" opacity="0.7"/>
+  <path d="M280,120 Q290,200 320,290" fill="none" stroke="#c2410c" stroke-width="2" opacity="0.65"/>
+  <text x="20" y="380" fill="#bae6fd" font-size="14" font-family="sans-serif" opacity="0.9">伽利略號探測器實景 · 木衛二 Europa 冰下海洋與交錯冰裂紋</text>
+</svg>

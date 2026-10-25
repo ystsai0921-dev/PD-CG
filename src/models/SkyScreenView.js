@@ -573,6 +573,7 @@ export class SkyScreenView {
         hitRadius: 13,
         info: {
           type: 'Planet',
+          bodyId: p.id,
           title: `${p.symbol} ${p.nameZh} (${p.nameEn})`,
           subtitle: `地平仰角 ${p.altitude.toFixed(1)}° | 方位角 ${p.azimuth.toFixed(1)}°`,
           details: `距離地球: ${p.distAU.toFixed(2)} AU\n赤經: ${formatRA(p.ra)} | 赤緯: ${p.dec.toFixed(2)}°`
@@ -609,6 +610,7 @@ export class SkyScreenView {
           hitRadius: 16,
           info: {
             type: 'Body',
+            bodyId: 'Sun',
             title: '☀ 太陽 (Sun)',
             subtitle: `地平仰角 ${this.ephemeris.sun.altitude.toFixed(1)}° | 方位角 ${this.ephemeris.sun.azimuth.toFixed(1)}°`,
             details: `目前位於黃道：${this.ephemeris.sun.zodiac.symbol} ${this.ephemeris.sun.zodiac.nameZh} (${this.ephemeris.sun.zodiac.nameEn})\n太陽黃經: ${this.ephemeris.sun.elon.toFixed(2)}° | 赤經: ${formatRA(this.ephemeris.sun.ra)}`
@@ -637,6 +639,7 @@ export class SkyScreenView {
           hitRadius: 15,
           info: {
             type: 'Body',
+            bodyId: 'Moon',
             title: '🌙 月球 (Moon)',
             subtitle: `地平仰角 ${this.ephemeris.moon.altitude.toFixed(1)}° | 方位角 ${this.ephemeris.moon.azimuth.toFixed(1)}°`,
             details: `月相：${this.ephemeris.moon.phaseName} (照明率 ${(this.ephemeris.moon.fraction * 100).toFixed(1)}%)\n赤經: ${formatRA(this.ephemeris.moon.ra)} | 赤緯: ${this.ephemeris.moon.dec.toFixed(2)}°`

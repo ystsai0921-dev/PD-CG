@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="moonFull" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="50%" stop-color="#cbd5e1"/>
+      <stop offset="85%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#03050a"/>
+  <circle cx="300" cy="200" r="130" fill="url(#moonFull)"/>
+  <path d="M220,150 Q260,130 270,180 Q240,220 200,180 Z" fill="#475569" opacity="0.75"/>
+  <path d="M275,150 Q310,135 325,170 Q305,195 275,180 Z" fill="#334155" opacity="0.7"/>
+  <path d="M330,175 Q360,165 370,195 Q340,225 320,205 Z" fill="#334155" opacity="0.75"/>
+  <path d="M250,220 Q280,210 295,245 Q265,270 240,250 Z" fill="#475569" opacity="0.65"/>
+  <circle cx="300" cy="285" r="7" fill="#ffffff"/>
+  <path d="M300,285 L260,210 M300,285 L350,230 M300,285 L240,270 M300,285 L360,290" stroke="#f1f5f9" stroke-width="1.2" opacity="0.6"/>
+  <text x="20" y="380" fill="#e2e8f0" font-size="14" font-family="sans-serif" opacity="0.85">NASA LRO 月球勘測軌道飛行器 · 月球正面風暴洋與第谷坑</text>
+</svg>

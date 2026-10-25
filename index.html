@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PD觀星</title>
   <link rel="icon" type="image/jpeg" href="./public/logo.jpg" />
-  <link rel="stylesheet" href="./src/style.css?v=20261023_01" />
+  <link rel="stylesheet" href="./src/style.css?v=20261025_01" />
   <!-- Import map allows running directly via static server without Node/Vite bundling, while staying 100% compatible with Vite -->
   <script type="importmap">
     {
@@ -243,7 +243,7 @@
         </div>
 
         <footer class="version-footer">
-          <span class="version-tag" id="app-version-tag">v0.4</span>
+          <span class="version-tag" id="app-version-tag">v0.5</span>
           <span class="version-repo">PD-CG · Celestial Globe</span>
         </footer>
       </section>
@@ -311,6 +311,24 @@
     </main>
   </div>
 
-  <script type="module" src="./src/main.js?v=20261023_01"></script>
+  <!-- 天體實景照片高清燈箱預覽視窗 (Lightbox) -->
+  <div id="celestial-lightbox" class="celestial-lightbox hidden">
+    <div class="lightbox-backdrop" id="lightbox-backdrop"></div>
+    <div class="lightbox-modal">
+      <button class="lightbox-close" id="lightbox-close" title="關閉大圖 (Esc)">✕</button>
+      <div class="lightbox-img-wrapper">
+        <img id="lightbox-img" class="lightbox-img" src="" alt="" />
+      </div>
+      <div class="lightbox-details">
+        <div class="lightbox-header-row">
+          <div id="lightbox-title" class="lightbox-title"></div>
+          <div id="lightbox-credit" class="lightbox-credit"></div>
+        </div>
+        <div id="lightbox-caption" class="lightbox-caption"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js?v=20261025_01"></script>
 </body>
 </html>

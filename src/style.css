@@ -1137,5 +1137,339 @@ input:focus {
   font-weight: 700;
 }
 
+/* ==========================================================================
+   天體實景相片展覽卡 (Celestial Body Photo Gallery Card)
+   ========================================================================== */
+.cg-photo-card {
+  margin: 8px 0;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(110, 148, 218, 0.32);
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cg-photo-card:hover {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.18);
+}
+
+.cg-photo-viewport {
+  position: relative;
+  width: 100%;
+  height: 142px;
+  background: #020409;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.cg-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.cg-photo-viewport:hover .cg-photo-img {
+  transform: scale(1.04);
+}
+
+.cg-photo-badges {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  gap: 4px;
+}
+
+.cg-badge-num {
+  font-size: 10.5px;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  color: #fde68a;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+.cg-badge-credit {
+  font-size: 10px;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+  backdrop-filter: blur(4px);
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cg-zoom-hint {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  opacity: 0.75;
+  transition: opacity 0.2s, background 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.cg-photo-viewport:hover .cg-zoom-hint {
+  opacity: 1;
+  background: rgba(245, 158, 11, 0.9);
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.cg-photo-meta {
+  padding: 8px 10px;
+  background: rgba(17, 24, 39, 0.65);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cg-photo-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.cg-photo-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fde68a;
+  line-height: 1.35;
+}
+
+.cg-photo-year {
+  font-size: 10.5px;
+  color: #94a3b8;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.cg-photo-caption {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.cg-gallery-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 10px 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cg-nav-arrow {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(110, 148, 218, 0.3);
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cg-nav-arrow:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #facc15;
+  color: #fef08a;
+}
+
+.cg-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cg-pill {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(110, 148, 218, 0.25);
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cg-pill:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #e2e8f0;
+}
+
+.cg-pill.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #fde047;
+  color: #0f172a;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+/* ==========================================================================
+   高清大圖全螢幕燈箱 (Celestial Lightbox Modal)
+   ========================================================================== */
+.celestial-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  user-select: auto;
+}
+
+.celestial-lightbox.hidden {
+  display: none !important;
+}
+
+.lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.lightbox-modal {
+  position: relative;
+  z-index: 2;
+  max-width: 860px;
+  width: 92vw;
+  max-height: 90vh;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 35px rgba(245, 158, 11, 0.22);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: lightboxPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes lightboxPop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #f1f5f9;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lightbox-close:hover {
+  background: rgba(239, 68, 68, 0.85);
+  border-color: #ef4444;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.lightbox-img-wrapper {
+  flex: 1;
+  min-height: 220px;
+  max-height: 65vh;
+  background: #020307;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.lightbox-img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  display: block;
+}
+
+.lightbox-details {
+  padding: 14px 18px;
+  background: rgba(11, 18, 33, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lightbox-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.lightbox-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fde68a;
+  letter-spacing: 0.5px;
+}
+
+.lightbox-credit {
+  font-size: 12px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.lightbox-caption {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+
 
 

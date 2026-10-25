@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="sunVis" cx="45%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#fffef0"/>
+      <stop offset="40%" stop-color="#fde047"/>
+      <stop offset="80%" stop-color="#eab308"/>
+      <stop offset="98%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#854d0e"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#020205"/>
+  <circle cx="300" cy="200" r="135" fill="url(#sunVis)"/>
+  <circle cx="260" cy="170" r="3.5" fill="#713f12" opacity="0.75"/>
+  <circle cx="266" cy="173" r="2" fill="#713f12" opacity="0.75"/>
+  <circle cx="330" cy="230" r="4" fill="#713f12" opacity="0.8"/>
+  <circle cx="337" cy="232" r="2.5" fill="#713f12" opacity="0.8"/>
+  <circle cx="343" cy="228" r="2" fill="#713f12" opacity="0.8"/>
+  <text x="20" y="380" fill="#fef08a" font-size="14" font-family="sans-serif" opacity="0.85">太陽可見光全日面 · 邊緣昏暗效應與光球層太陽黑子群</text>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="ioGrad" cx="42%" cy="40%" r="58%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="45%" stop-color="#eab308"/>
+      <stop offset="80%" stop-color="#a16207"/>
+      <stop offset="100%" stop-color="#451a03"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#020204"/>
+  <path d="M185,170 Q140,140 160,110 Q190,135 195,160 Z" fill="#38bdf8" opacity="0.6"/>
+  <circle cx="300" cy="200" r="115" fill="url(#ioGrad)"/>
+  <circle cx="250" cy="160" r="14" fill="#7f1d1d" stroke="#ef4444" stroke-width="2"/>
+  <circle cx="330" cy="230" r="18" fill="#450a0a" stroke="#f97316" stroke-width="2"/>
+  <circle cx="345" cy="160" r="10" fill="#78350f"/>
+  <text x="20" y="380" fill="#fef08a" font-size="14" font-family="sans-serif" opacity="0.9">朱諾號與伽利略號 · 木衛一 Io 活火山噴發羽流與硫磺地表</text>
+</svg>

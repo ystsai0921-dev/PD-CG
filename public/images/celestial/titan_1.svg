@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="titanAtm" cx="42%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#fed7aa"/>
+      <stop offset="45%" stop-color="#fb923c"/>
+      <stop offset="80%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#431407"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#040201"/>
+  <circle cx="300" cy="200" r="128" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.45"/>
+  <circle cx="300" cy="200" r="120" fill="url(#titanAtm)"/>
+  <ellipse cx="300" cy="115" rx="35" ry="12" fill="#1e293b" opacity="0.6"/>
+  <text x="20" y="380" fill="#fdba74" font-size="14" font-family="sans-serif" opacity="0.9">卡西尼-惠更斯號 · 土衛六 Titan 氮氣稠密大氣與液態烴湖泊</text>
+</svg>

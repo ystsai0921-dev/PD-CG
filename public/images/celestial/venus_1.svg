@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="venusAtm" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#fde047"/>
+      <stop offset="75%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#451a03"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#060301"/>
+  <circle cx="300" cy="200" r="130" fill="url(#venusAtm)"/>
+  <path d="M190,160 Q280,180 380,140 Q410,170 360,210 Q270,220 200,190 Z" fill="#eab308" opacity="0.45"/>
+  <path d="M180,210 Q280,230 400,190 Q370,240 280,260 Q210,250 180,210 Z" fill="#a16207" opacity="0.35"/>
+  <text x="20" y="380" fill="#fef08a" font-size="14" font-family="sans-serif" opacity="0.9">水手 10 號探測器實景 · 金星濃厚硫酸雲系與大氣超旋轉</text>
+</svg>

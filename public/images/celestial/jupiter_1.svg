@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="jupSphere" cx="42%" cy="40%" r="62%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="35%" stop-color="#fdba74"/>
+      <stop offset="70%" stop-color="#ea580c"/>
+      <stop offset="95%" stop-color="#7c2d12"/>
+      <stop offset="100%" stop-color="#2a0c04"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="400" fill="#030205"/>
+  <circle cx="300" cy="200" r="135" fill="url(#jupSphere)"/>
+  <path d="M165,145 Q300,135 435,145 L435,165 Q300,155 165,165 Z" fill="#9a3412" opacity="0.6"/>
+  <path d="M165,185 Q300,175 435,185 L435,210 Q300,200 165,210 Z" fill="#7c2d12" opacity="0.75"/>
+  <path d="M165,230 Q300,225 435,230 L435,250 Q300,245 165,250 Z" fill="#9a3412" opacity="0.6"/>
+  <ellipse cx="330" cy="225" rx="32" ry="18" fill="#b91c1c" stroke="#fed7aa" stroke-width="2"/>
+  <ellipse cx="330" cy="225" rx="18" ry="9" fill="#ef4444"/>
+  <text x="20" y="380" fill="#fdba74" font-size="14" font-family="sans-serif" opacity="0.9">NASA 朱諾號 Juno 太空船 · 木星大紅斑巨型反氣旋暴風實景</text>
+</svg>
