@@ -2,7 +2,7 @@ import { SceneManager } from './core/SceneManager.js?v=20261023_01';
 import { SkyScreenView } from './models/SkyScreenView.js?v=20261023_01';
 import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261023_01';
 import { ZODIAC_CONSTELLATIONS } from './data/zodiacData.js?v=20261023_01';
-import { getCelestialBodyPhotos, renderPhotoGalleryHtml } from './data/celestialImages.js?v=20261025_01';
+import { getCelestialBodyPhotos, renderPhotoGalleryHtml, getPhotoUrl } from './data/celestialImages.js?v=20261025_02';
 
 // 應用程式全域狀態
 const state = {
@@ -341,12 +341,13 @@ function updateControlModeUI(mode) {
 // 開啟天體實景相片高解析度燈箱 (Lightbox)
 function openCelestialLightbox(photo) {
   if (!els.lightbox.root || !photo) return;
-  els.lightbox.img.src = photo.url;
-  els.lightbox.img.dataset.triedLocal = '';
+  const photoUrl = getPhotoUrl(photo.file);
+  els.lightbox.img.src = photoUrl;
+  els.lightbox.img.dataset.fallbackTried = '';
   els.lightbox.img.onerror = () => {
-    if (!els.lightbox.img.dataset.triedLocal) {
-      els.lightbox.img.dataset.triedLocal = '1';
-      els.lightbox.img.src = photo.localUrl;
+    if (!els.lightbox.img.dataset.fallbackTried) {
+      els.lightbox.img.dataset.fallbackTried = '1';
+      els.lightbox.img.src = `/public/images/celestial/${photo.file}`;
     }
   };
   els.lightbox.title.textContent = photo.title || '';
