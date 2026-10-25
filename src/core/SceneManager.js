@@ -162,10 +162,11 @@ export class SceneManager {
 
     // 若原本因點選星座而處於適度 Zoom-in 狀態，按 Esc 時平滑退回全天球視野距離
     if (hadConstellationHighlight) {
+      const returnDist = this.celestialViewMode === 'horizon-top' ? 310 : 340;
       const currentDir = new THREE.Vector3()
         .subVectors(this.camera.position, this.controls.target)
         .normalize();
-      this.controls.lookAtDirectionSmooth(currentDir, 225, new THREE.Vector3(0, 0, 0));
+      this.controls.lookAtDirectionSmooth(currentDir, returnDist, new THREE.Vector3(0, 0, 0));
     }
   }
 
@@ -193,8 +194,12 @@ export class SceneManager {
     const hits = this.raycaster.intersectObjects(activePickables, false);
     for (let i = 0; i < hits.length; i++) {
       const hit = hits[i];
-      // 若處於 L1 正北朝上俯視模式，地平面以下 (world Y < -0.01) 已被裁切隱藏，不可被射線點選
-      if (this.currentScale === 'celestial' && this.celestialViewMode === 'horizon-top') {
+      // 若處於 L1 正北朝上俯視模式且未選中星座，地平面以下 (world Y < -0.01) 已被裁切隱藏，不可被射線點選
+      if (
+        this.currentScale === 'celestial' &&
+        this.celestialViewMode === 'horizon-top' &&
+        !(this.celestialModel && this.celestialModel.activeHighlight)
+      ) {
         if (hit.point.y < -0.01) continue;
       }
       const obj = hit.object;
@@ -273,19 +278,22 @@ export class SceneManager {
   }
 
   _handleObjectSelect(info) {
-    // L1 點擊到星座名時，平滑轉向該星群並適度 Zoom-in，以能清楚辨析各恆星與名字標籤
-    if (
-      this.currentScale === 'celestial' &&
-      info &&
-      info.type === 'Constellation' &&
-      info.direction
-    ) {
-      const worldDir = info.direction.clone().applyQuaternion(this.celestialModel.group.quaternion);
-      this.controls.lookAtDirectionSmooth(
-        worldDir,
-        info.zoomDistance || 156,
-        new THREE.Vector3(0, 0, 0)
-      );
+    // L1 點擊到星座名或恆星時，平滑轉向該星群並適度 Zoom-in，以能完整涵蓋意象圖全貌與清楚辨析各恆星
+    if (this.currentScale === 'celestial' && info) {
+      let targetEntry = null;
+      if (info.type === 'Constellation' && info.constellationId) {
+        targetEntry = this.celestialModel.constellationMap[info.constellationId];
+      } else if (info.type === 'Star' && info.constellationId) {
+        targetEntry = this.celestialModel.constellationMap[info.constellationId];
+      }
+      if (targetEntry && targetEntry.c && targetEntry.c.centerDirection) {
+        const worldDir = targetEntry.c.centerDirection.clone().applyQuaternion(this.celestialModel.group.quaternion);
+        this.controls.lookAtDirectionSmooth(
+          worldDir,
+          targetEntry.c.zoomDistance || 210,
+          new THREE.Vector3(0, 0, 0)
+        );
+      }
     }
 
     if (this.callbacks.onSelectObject) {
@@ -560,7 +568,7 @@ export class SceneManager {
       const worldDir = entry.c.centerDirection.clone().applyQuaternion(this.celestialModel.group.quaternion);
       this.controls.lookAtDirectionSmooth(
         worldDir,
-        entry.c.zoomDistance || 156,
+        entry.c.zoomDistance || 210,
         new THREE.Vector3(0, 0, 0)
       );
     }

@@ -515,8 +515,18 @@ export class CelestialGlobeModel {
       sEntry.detailLabel.position.copy(starPos.clone().multiplyScalar(1.025).add(outward));
     });
 
-    // 預設天球距離約 228，適度 Zoom-in 距離介於 145 ~ 168（視星群跨距自動調整）
-    const zoomDistance = Math.round(Math.max(145, Math.min(168, GLOBE_RADIUS + 38 + maxSpread * 1.35)));
+    const artCfg = CONSTELLATION_ART_CONFIG[c.id];
+    const artSize = artCfg && artCfg.scale ? artCfg.scale : Math.max(48, Math.min(115, maxSpread * 2.35 + 14));
+
+    // 計算完整容納意象圖神話輪廓與外推恆星標籤的最佳 Zoom-in 距離
+    // 相機 FOV = 48°，tan(24°) ≈ 0.4452
+    // 為確保頭部、四肢、翅膀與向外推開的恆星標籤完全不被視窗邊緣裁切，預留 22% 呼吸邊距
+    const halfFovRad = THREE.MathUtils.degToRad(24);
+    const tanHalfFov = Math.tan(halfFovRad);
+    const starsExtent = (maxSpread + 8.5) * 2;
+    const targetExtent = Math.max(artSize * 1.22, starsExtent * 1.15);
+    const fitDistanceToSphere = (targetExtent / 2) / (tanHalfFov * 0.95);
+    const zoomDistance = Math.round(GLOBE_RADIUS + Math.max(45, Math.min(140, fitDistanceToSphere)));
 
     const cleanNameZh = c.nameZh.split('（')[0].trim();
     const pureNameZh = isZodiac ? `${c.symbol} ${cleanNameZh}` : cleanNameZh;
@@ -573,12 +583,10 @@ export class CelestialGlobeModel {
     c.labelObject = labelObj;
 
     // 建立星座背後 3D 古典意象插圖網格 (Constellation Artwork Mesh)
-    const artCfg = CONSTELLATION_ART_CONFIG[c.id];
     let artMesh = null;
     let artMat = null;
 
     if (artCfg) {
-      const artSize = artCfg.scale || Math.max(48, Math.min(115, maxSpread * 2.35 + 14));
       const artGeo = new THREE.PlaneGeometry(artSize, artSize);
 
       const texture = this.textureLoader.load(`./public/images/constellations/${artCfg.file}`);
@@ -796,6 +804,7 @@ export class CelestialGlobeModel {
     this.activeHighlight = null;
 
     if (this.isHorizonTop) {
+      this._applyClippingToMaterials(true);
       this.updateHorizonClippedLabels();
     }
   }
@@ -968,25 +977,46 @@ export class CelestialGlobeModel {
           s.detailLabel.element.style.display = 'none';
         });
       } else {
-        if (entry.group) entry.group.visible = true;
+        if (entry.group) {
+          entry.group.visible = true;
+          // 選中星座全體物件解除地平裁切平面，確保意象圖、恆星與骨架完全無裁切呈現在視野中
+          entry.group.traverse((child) => {
+            if (child.material) {
+              child.material.clippingPlanes = null;
+              child.material.needsUpdate = true;
+            }
+          });
+        }
         // 核心：在選中星座背後顯現古典意象圖，並發出柔和星芒光輝
         if (entry.artMesh) {
           entry.artMesh.visible = true;
-          entry.artMesh.material.opacity = 0.85;
+          if (entry.artMesh.material) {
+            entry.artMesh.material.opacity = 0.85;
+            entry.artMesh.material.clippingPlanes = null;
+            entry.artMesh.material.needsUpdate = true;
+          }
         }
         if (entry.labelObj) {
           entry.labelObj.visible = true;
           entry.labelObj.element.style.display = '';
           entry.labelObj.element.classList.remove('muted-constellation-label');
         }
-        entry.lineMat.opacity = 1.0;
-        entry.lineMat.color.setHex(entry.baseLineColorHex);
+        if (entry.lineMat) {
+          entry.lineMat.opacity = 1.0;
+          entry.lineMat.color.setHex(entry.baseLineColorHex);
+          entry.lineMat.clippingPlanes = null;
+          entry.lineMat.needsUpdate = true;
+        }
         entry.starEntries.forEach((s) => {
           s.mesh.visible = true;
           s.mesh.scale.setScalar(1.4);
           s.mesh.material.opacity = 1.0;
           s.mesh.material.color.setHex(s.baseColorHex);
+          s.mesh.material.clippingPlanes = null;
+          s.mesh.material.needsUpdate = true;
           s.haloMesh.visible = true;
+          s.haloMesh.material.clippingPlanes = null;
+          s.haloMesh.material.needsUpdate = true;
           s.detailLabel.visible = true;
           s.detailLabel.element.style.display = '';
           s.detailLabel.element.classList.add('is-visible');
@@ -1706,6 +1736,20 @@ export class CelestialGlobeModel {
           cEntry.labelObj.visible = false;
           cEntry.labelObj.element.style.display = 'none';
         }
+        return;
+      }
+      if (isConstellationSelected && cEntry.c.id === selectedId) {
+        if (cEntry.labelObj) {
+          cEntry.labelObj.visible = true;
+          cEntry.labelObj.element.style.display = '';
+        }
+        cEntry.starEntries.forEach((s) => {
+          if (s.detailLabel) {
+            s.detailLabel.visible = true;
+            s.detailLabel.element.style.display = '';
+            s.detailLabel.element.classList.add('is-visible');
+          }
+        });
         return;
       }
       const centerWorldY = cEntry.c.centerDirection
