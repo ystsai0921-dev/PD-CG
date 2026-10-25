@@ -551,8 +551,19 @@ export class SceneManager {
     if (this.currentScale !== 'celestial') {
       this.setScale('celestial');
     }
-    // 觸發該星座所有恆星閃爍高亮、顯現各顆星名字與星等，並平滑轉向與適度 Zoom-in 聚焦該星群
+    // 觸發該星座所有恆星閃爍高亮、顯現各顆星名字與星等，深度虛化地球與背景
     this.celestialModel.selectConstellation(constellationId);
+
+    // 平滑轉向並 Zoom-in 聚焦該星座星群
+    const entry = this.celestialModel.constellationMap[constellationId];
+    if (entry && entry.c && entry.c.centerDirection) {
+      const worldDir = entry.c.centerDirection.clone().applyQuaternion(this.celestialModel.group.quaternion);
+      this.controls.lookAtDirectionSmooth(
+        worldDir,
+        entry.c.zoomDistance || 156,
+        new THREE.Vector3(0, 0, 0)
+      );
+    }
   }
 
   updateEphemeris(ephemeris) {

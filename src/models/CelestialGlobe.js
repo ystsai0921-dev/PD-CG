@@ -114,8 +114,11 @@ export class CelestialGlobeModel {
       metalness: 0.08,
       emissive: 0x0b1d3a,
       emissiveMap: colorMap,
-      emissiveIntensity: 0.32
+      emissiveIntensity: 0.32,
+      transparent: true,
+      opacity: 1.0
     });
+    this.earthMat = mat;
     this.earthMesh = new THREE.Mesh(geo, mat);
     this.earthMesh.userData = {
       type: 'Body',
@@ -136,7 +139,9 @@ export class CelestialGlobeModel {
       side: THREE.BackSide,
       depthWrite: false
     });
-    this.earthMesh.add(new THREE.Mesh(atmoGeo, atmoMat));
+    this.earthAtmoMat = atmoMat;
+    this.earthAtmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
+    this.earthMesh.add(this.earthAtmoMesh);
 
     // 地球赤道線與格林威治本初子午線微光標記
     const eqPts = [];
@@ -161,13 +166,13 @@ export class CelestialGlobeModel {
       transparent: true,
       opacity: 0.45
     });
-    const axisLine = new THREE.Line(axisGeo, axisMat);
-    axisLine.computeLineDistances();
-    earthGroup.add(axisLine);
+    this.earthAxisLine = new THREE.Line(axisGeo, axisMat);
+    this.earthAxisLine.computeLineDistances();
+    earthGroup.add(this.earthAxisLine);
 
     // 觀測者地表釘選點與法線立標 (隨輸入經緯度精準定位於地球陸地表面)
     const pinGeo = new THREE.SphereGeometry(0.38, 16, 16);
-    const pinMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+    const pinMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 1.0 });
     this.observerPin = new THREE.Mesh(pinGeo, pinMat);
     this.earthMesh.add(this.observerPin);
 
@@ -541,13 +546,50 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 清除目前天球上所有星座或行星的閃爍高亮狀態、恢復所有星星 100% 原始亮度，並隱藏各別恆星標籤 (例如按 Esc 退出時呼叫)
+   * 清除目前天球上所有星座或行星的高亮聚焦狀態，全面復原地球、背景星場、赤道黃道圈與所有星座的原始亮度
    */
   clearHighlight() {
+    // 1. 復原背景星場
     if (this.starfieldMat) {
       this.starfieldMat.opacity = this.baseStarfieldOpacity;
     }
 
+    // 2. 復原中心地球與大氣層、地軸、圖釘
+    if (this.earthMat) {
+      this.earthMat.opacity = 1.0;
+      this.earthMat.emissiveIntensity = 0.32;
+    }
+    if (this.earthAtmoMat) {
+      this.earthAtmoMat.opacity = 0.14;
+    }
+    if (this.earthAxisLine && this.earthAxisLine.material) {
+      this.earthAxisLine.material.opacity = 0.45;
+    }
+    if (this.observerPin && this.observerPin.material) {
+      this.observerPin.material.opacity = 1.0;
+    }
+
+    // 3. 復原赤道圈與黃道圈
+    this.equatorGroup.traverse((child) => {
+      if (child.isLine && child.material && child.userData.baseOpacity !== undefined) {
+        child.material.opacity = child.userData.baseOpacity;
+      }
+    });
+    this.eclipticGroup.traverse((child) => {
+      if ((child.isLine || child.isMesh) && child.material && child.userData.baseOpacity !== undefined) {
+        child.material.opacity = child.userData.baseOpacity;
+      }
+    });
+
+    // 4. 復原地平切面
+    if (this.upperDomeMesh && this.upperDomeMesh.material) {
+      this.upperDomeMesh.material.opacity = 0.25;
+    }
+    if (this.lowerDomeMesh && this.lowerDomeMesh.material) {
+      this.lowerDomeMesh.material.opacity = 0.25;
+    }
+
+    // 5. 復原所有星座
     Object.values(this.constellationMap).forEach((entry) => {
       entry.labelObj.element.classList.remove('active-blink-label', 'muted-constellation-label', 'is-hovered');
       const textEl = entry.labelObj.element.querySelector('.const-label-text');
@@ -570,9 +612,13 @@ export class CelestialGlobeModel {
       });
     });
 
+    // 6. 復原動態天體 (太陽、月球、行星)
     Object.values(this.dynamicBodyMap).forEach((b) => {
+      if (b.mesh && b.mesh.material) {
+        b.mesh.material.opacity = b.mesh.userData.baseOpacity !== undefined ? b.mesh.userData.baseOpacity : 1.0;
+      }
       if (b.labelObj && b.labelObj.element) {
-        b.labelObj.element.classList.remove('active-blink-label', 'is-hovered');
+        b.labelObj.element.classList.remove('active-blink-label', 'is-hovered', 'muted-body-label');
         const textEl = b.labelObj.element.querySelector('.const-label-text');
         if (textEl && b.conciseHtml) {
           textEl.innerHTML = b.conciseHtml;
@@ -685,21 +731,92 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 將非當前選中星座的其他所有恆星、星座連線與背景星場 Muted 50%，藉此強烈凸顯所選星座
+   * 當星座被選中時：全方位深度虛化背景，尤其是將中心地球虛化為幽靈微光透明體，並暗化非選中星群與赤道黃道，極大化凸顯當前星座的識別度
    */
   _muteOtherStars(selectedConstellationId) {
+    // 1. 深度虛化背景星場繁星 (降低 88%)
     if (this.starfieldMat) {
-      this.starfieldMat.opacity = this.baseStarfieldOpacity * 0.5;
+      this.starfieldMat.opacity = this.baseStarfieldOpacity * 0.12;
     }
 
+    // 2. 核心：將中心地球及其大氣層、地軸、圖釘大幅虛化半透明，徹底不遮擋星座視線
+    if (this.earthMat) {
+      this.earthMat.opacity = 0.08;
+      this.earthMat.emissiveIntensity = 0.04;
+    }
+    if (this.earthAtmoMat) {
+      this.earthAtmoMat.opacity = 0.01;
+    }
+    if (this.earthAxisLine && this.earthAxisLine.material) {
+      this.earthAxisLine.material.opacity = 0.08;
+    }
+    if (this.observerPin && this.observerPin.material) {
+      this.observerPin.material.opacity = 0.15;
+    }
+
+    // 3. 虛化赤道圈與黃道圈幾何線條
+    this.equatorGroup.traverse((child) => {
+      if (child.isLine && child.material) {
+        if (child.userData.baseOpacity === undefined) child.userData.baseOpacity = child.material.opacity;
+        child.material.opacity = child.userData.baseOpacity * 0.15;
+      }
+    });
+    this.eclipticGroup.traverse((child) => {
+      if ((child.isLine || child.isMesh) && child.material) {
+        if (child.userData.baseOpacity === undefined) child.userData.baseOpacity = child.material.opacity;
+        child.material.opacity = child.userData.baseOpacity * 0.15;
+      }
+    });
+
+    // 4. 虛化地平切面穹頂
+    if (this.upperDomeMesh && this.upperDomeMesh.material) {
+      this.upperDomeMesh.material.opacity = 0.03;
+    }
+    if (this.lowerDomeMesh && this.lowerDomeMesh.material) {
+      this.lowerDomeMesh.material.opacity = 0.03;
+    }
+
+    // 5. 虛化動態天體 (太陽、月球、行星)
+    Object.values(this.dynamicBodyMap).forEach((b) => {
+      if (b.mesh && b.mesh.material) {
+        if (b.mesh.userData.baseOpacity === undefined) {
+          b.mesh.userData.baseOpacity = b.mesh.material.opacity !== undefined ? b.mesh.material.opacity : 1.0;
+        }
+        b.mesh.material.opacity = 0.15;
+      }
+      if (b.labelObj && b.labelObj.element) {
+        b.labelObj.element.classList.add('muted-body-label');
+      }
+    });
+
+    // 6. 深度虛化其他非選中星座，並強烈突顯當前選中星座
     Object.values(this.constellationMap).forEach((entry) => {
       if (entry.c.id !== selectedConstellationId) {
         entry.labelObj.element.classList.add('muted-constellation-label');
-        entry.lineMat.opacity = entry.baseLineOpacity * 0.5;
-        entry.lineMat.color.copy(entry.baseLineColorObj).multiplyScalar(0.5);
+        entry.lineMat.opacity = entry.baseLineOpacity * 0.10;
+        entry.lineMat.color.copy(entry.baseLineColorObj).multiplyScalar(0.18);
         entry.starEntries.forEach((s) => {
-          s.mesh.material.opacity = 0.5;
-          s.mesh.material.color.copy(s.baseColorObj).multiplyScalar(0.5);
+          s.mesh.scale.setScalar(0.82);
+          s.mesh.material.opacity = 0.12;
+          s.mesh.material.color.copy(s.baseColorObj).multiplyScalar(0.18);
+          s.haloMesh.visible = false;
+          s.detailLabel.visible = false;
+          s.detailLabel.element.style.display = 'none';
+          s.detailLabel.element.classList.remove('is-visible');
+        });
+      } else {
+        // 當前選中星座：高光飽和、星芒璀璨、恆星放大 1.4 倍
+        entry.labelObj.element.classList.remove('muted-constellation-label');
+        entry.lineMat.opacity = 1.0;
+        entry.lineMat.color.setHex(entry.baseLineColorHex);
+        entry.starEntries.forEach((s) => {
+          s.mesh.scale.setScalar(1.4);
+          s.mesh.material.opacity = 1.0;
+          s.mesh.material.color.setHex(s.baseColorHex);
+          s.haloMesh.visible = true;
+          s.detailLabel.visible = true;
+          s.detailLabel.element.style.display = '';
+          s.detailLabel.element.classList.add('is-visible');
         });
       }
     });
