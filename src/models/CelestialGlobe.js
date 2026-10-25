@@ -84,6 +84,7 @@ export class CelestialGlobeModel {
     // L1 視角狀態與地平半球裁切平面 (世界座標 Y >= 0 為地平面以上可見天球蒼穹)
     this.isHorizonTop = false;
     this.showLabelsOption = true;
+    this.showHorizonOption = true;
     this.currentEphemeris = null;
     this.horizonClipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
@@ -98,6 +99,7 @@ export class CelestialGlobeModel {
 
   _buildEarthCenter() {
     const earthGroup = new THREE.Group();
+    this.earthGroup = earthGroup;
 
     // 太陽對中心地球的真實方向照射光（呈現地球晝夜半球與陸地山脈陰影）
     this.earthSunLight = new THREE.DirectionalLight(0xfffbeb, 2.2);
@@ -529,6 +531,7 @@ export class CelestialGlobeModel {
 
     this.constellationMap[c.id] = {
       c,
+      group: cGroup,
       isZodiac,
       starEntries,
       lineMat,
@@ -554,53 +557,130 @@ export class CelestialGlobeModel {
       this.starfieldMat.opacity = this.baseStarfieldOpacity;
     }
 
-    // 2. 復原中心地球與大氣層、地軸、圖釘
-    if (this.earthMat) {
-      this.earthMat.opacity = 1.0;
-      this.earthMat.emissiveIntensity = 0.32;
+    // 2. 復原東南西北方位羅盤、刻度與地平圈系統
+    const showHorizon = this.showHorizonOption !== undefined ? this.showHorizonOption : true;
+    this.horizonGroup.visible = showHorizon;
+    this.cardinalLabels.forEach((lbl) => {
+      lbl.visible = showHorizon;
+      lbl.element.style.display = showHorizon ? '' : 'none';
+    });
+    if (this.zenithRotateLabel) {
+      const showZenithBtn = !this.isHorizonTop && showHorizon;
+      this.zenithRotateLabel.visible = showZenithBtn;
+      this.zenithRotateLabel.element.style.display = showZenithBtn ? '' : 'none';
     }
-    if (this.earthAtmoMat) {
-      this.earthAtmoMat.opacity = 0.14;
+    if (this.upperDomeMesh && this.upperDomeMesh.material) {
+      this.upperDomeMesh.material.opacity = 0.25;
     }
-    if (this.earthAxisLine && this.earthAxisLine.material) {
-      this.earthAxisLine.material.opacity = 0.45;
-    }
-    if (this.observerPin && this.observerPin.material) {
-      this.observerPin.material.opacity = 1.0;
+    if (this.lowerDomeMesh && this.lowerDomeMesh.material) {
+      this.lowerDomeMesh.visible = !this.isHorizonTop && showHorizon;
+      this.lowerDomeMesh.material.opacity = 0.34;
     }
 
-    // 3. 復原赤道圈與黃道圈
+    // 3. 復原中心地球與大氣層、地軸、圖釘
+    if (this.earthGroup) {
+      this.earthGroup.visible = true;
+    }
+    if (this.earthMesh) {
+      this.earthMesh.visible = true;
+      if (this.earthMat) {
+        this.earthMat.opacity = 1.0;
+        this.earthMat.emissiveIntensity = 0.32;
+      }
+    }
+    if (this.earthAtmoMesh) {
+      this.earthAtmoMesh.visible = true;
+      if (this.earthAtmoMat) {
+        this.earthAtmoMat.opacity = 0.14;
+      }
+    }
+    if (this.earthAxisLine) {
+      this.earthAxisLine.visible = true;
+      if (this.earthAxisLine.material) {
+        this.earthAxisLine.material.opacity = 0.45;
+      }
+    }
+    if (this.observerPin) {
+      this.observerPin.visible = true;
+      if (this.observerPin.material) {
+        this.observerPin.material.opacity = 1.0;
+      }
+    }
+    if (this.earthSunLight) {
+      this.earthSunLight.visible = true;
+    }
+
+    // 4. 復原赤道圈與黃道圈
+    this.equatorGroup.visible = true;
     this.equatorGroup.traverse((child) => {
       if (child.isLine && child.material && child.userData.baseOpacity !== undefined) {
         child.material.opacity = child.userData.baseOpacity;
       }
     });
+    if (this.ncpLabel) {
+      this.ncpLabel.visible = this.showLabelsOption;
+      this.ncpLabel.element.style.display = this.showLabelsOption ? '' : 'none';
+    }
+    if (this.scpLabel) {
+      this.scpLabel.visible = this.showLabelsOption;
+      this.scpLabel.element.style.display = this.showLabelsOption ? '' : 'none';
+    }
+
+    this.eclipticGroup.visible = true;
     this.eclipticGroup.traverse((child) => {
       if ((child.isLine || child.isMesh) && child.material && child.userData.baseOpacity !== undefined) {
         child.material.opacity = child.userData.baseOpacity;
       }
     });
 
-    // 4. 復原地平切面
-    if (this.upperDomeMesh && this.upperDomeMesh.material) {
-      this.upperDomeMesh.material.opacity = 0.25;
-    }
-    if (this.lowerDomeMesh && this.lowerDomeMesh.material) {
-      this.lowerDomeMesh.material.opacity = 0.25;
-    }
-
-    // 5. 復原所有星座
-    Object.values(this.constellationMap).forEach((entry) => {
-      entry.labelObj.element.classList.remove('active-blink-label', 'muted-constellation-label', 'is-hovered');
-      const textEl = entry.labelObj.element.querySelector('.const-label-text');
-      if (textEl) {
-        textEl.innerHTML = entry.pureNameZh;
-      } else {
-        entry.labelObj.element.innerHTML = entry.conciseLabelHtml;
+    // 5. 復原動態天體 (太陽、月球、行星)
+    this.dynamicBodiesGroup.visible = true;
+    Object.values(this.dynamicBodyMap).forEach((b) => {
+      if (b.mesh) {
+        b.mesh.visible = true;
+        if (b.mesh.material) {
+          b.mesh.material.opacity = b.mesh.userData.baseOpacity !== undefined ? b.mesh.userData.baseOpacity : 1.0;
+        }
+        b.mesh.scale.setScalar(1);
+        b.mesh.material.color.setHex(b.baseColorHex);
       }
-      entry.lineMat.color.setHex(entry.baseLineColorHex);
-      entry.lineMat.opacity = entry.baseLineOpacity;
+      if (b.haloMesh) {
+        b.haloMesh.visible = false;
+        b.haloMesh.material.opacity = 0;
+      }
+      if (b.labelObj && b.labelObj.element) {
+        b.labelObj.visible = this.showLabelsOption;
+        b.labelObj.element.style.display = this.showLabelsOption ? '' : 'none';
+        b.labelObj.element.classList.remove('active-blink-label', 'is-hovered', 'muted-body-label');
+        const textEl = b.labelObj.element.querySelector('.const-label-text');
+        if (textEl && b.conciseHtml) {
+          textEl.innerHTML = b.conciseHtml;
+        } else if (b.conciseHtml) {
+          b.labelObj.element.innerHTML = b.conciseHtml;
+        }
+      }
+    });
+
+    // 6. 復原所有星座
+    Object.values(this.constellationMap).forEach((entry) => {
+      if (entry.group) entry.group.visible = true;
+      if (entry.labelObj && entry.labelObj.element) {
+        entry.labelObj.visible = this.showLabelsOption;
+        entry.labelObj.element.style.display = this.showLabelsOption ? '' : 'none';
+        entry.labelObj.element.classList.remove('active-blink-label', 'muted-constellation-label', 'is-hovered');
+        const textEl = entry.labelObj.element.querySelector('.const-label-text');
+        if (textEl) {
+          textEl.innerHTML = entry.pureNameZh;
+        } else {
+          entry.labelObj.element.innerHTML = entry.conciseLabelHtml;
+        }
+      }
+      if (entry.lineMat) {
+        entry.lineMat.color.setHex(entry.baseLineColorHex);
+        entry.lineMat.opacity = entry.baseLineOpacity;
+      }
       entry.starEntries.forEach((s) => {
+        s.mesh.visible = true;
         s.mesh.scale.setScalar(1);
         s.mesh.material.color.setHex(s.baseColorHex);
         s.mesh.material.opacity = 1.0;
@@ -612,29 +692,11 @@ export class CelestialGlobeModel {
       });
     });
 
-    // 6. 復原動態天體 (太陽、月球、行星)
-    Object.values(this.dynamicBodyMap).forEach((b) => {
-      if (b.mesh && b.mesh.material) {
-        b.mesh.material.opacity = b.mesh.userData.baseOpacity !== undefined ? b.mesh.userData.baseOpacity : 1.0;
-      }
-      if (b.labelObj && b.labelObj.element) {
-        b.labelObj.element.classList.remove('active-blink-label', 'is-hovered', 'muted-body-label');
-        const textEl = b.labelObj.element.querySelector('.const-label-text');
-        if (textEl && b.conciseHtml) {
-          textEl.innerHTML = b.conciseHtml;
-        } else if (b.conciseHtml) {
-          b.labelObj.element.innerHTML = b.conciseHtml;
-        }
-      }
-      b.mesh.scale.setScalar(1);
-      b.mesh.material.color.setHex(b.baseColorHex);
-      if (b.haloMesh) {
-        b.haloMesh.visible = false;
-        b.haloMesh.material.opacity = 0;
-      }
-    });
-
     this.activeHighlight = null;
+
+    if (this.isHorizonTop) {
+      this.updateHorizonClippedLabels();
+    }
   }
 
   /**
@@ -731,85 +793,86 @@ export class CelestialGlobeModel {
   }
 
   /**
-   * 當星座被選中時：全方位深度虛化背景，尤其是將中心地球虛化為幽靈微光透明體，並暗化非選中星群與赤道黃道，極大化凸顯當前星座的識別度
+   * 當星座被選中時：完全隱藏「東南西北」方位羅盤與地平圈、中心地球、動態行星與太陽月球、
+   * 其他所有非選中星座，使畫面完全只保留選中的星座及其恆星與標籤，呈現最純淨無干擾的聚光視野。
    */
   _muteOtherStars(selectedConstellationId) {
-    // 1. 深度虛化背景星場繁星 (降低 88%)
+    // 1. 深度淡化背景微弱星場
     if (this.starfieldMat) {
-      this.starfieldMat.opacity = this.baseStarfieldOpacity * 0.12;
+      this.starfieldMat.opacity = this.baseStarfieldOpacity * 0.10;
     }
 
-    // 2. 核心：將中心地球及其大氣層、地軸、圖釘大幅虛化半透明，徹底不遮擋星座視線
-    if (this.earthMat) {
-      this.earthMat.opacity = 0.08;
-      this.earthMat.emissiveIntensity = 0.04;
-    }
-    if (this.earthAtmoMat) {
-      this.earthAtmoMat.opacity = 0.01;
-    }
-    if (this.earthAxisLine && this.earthAxisLine.material) {
-      this.earthAxisLine.material.opacity = 0.08;
-    }
-    if (this.observerPin && this.observerPin.material) {
-      this.observerPin.material.opacity = 0.15;
-    }
-
-    // 3. 虛化赤道圈與黃道圈幾何線條
-    this.equatorGroup.traverse((child) => {
-      if (child.isLine && child.material) {
-        if (child.userData.baseOpacity === undefined) child.userData.baseOpacity = child.material.opacity;
-        child.material.opacity = child.userData.baseOpacity * 0.15;
-      }
+    // 2. 完全隱藏「東南西北」羅盤、地平切面穹頂、方位標籤與天頂旋轉符號
+    this.horizonGroup.visible = false;
+    this.cardinalLabels.forEach((lbl) => {
+      lbl.visible = false;
+      lbl.element.style.display = 'none';
     });
-    this.eclipticGroup.traverse((child) => {
-      if ((child.isLine || child.isMesh) && child.material) {
-        if (child.userData.baseOpacity === undefined) child.userData.baseOpacity = child.material.opacity;
-        child.material.opacity = child.userData.baseOpacity * 0.15;
-      }
-    });
-
-    // 4. 虛化地平切面穹頂
-    if (this.upperDomeMesh && this.upperDomeMesh.material) {
-      this.upperDomeMesh.material.opacity = 0.03;
-    }
-    if (this.lowerDomeMesh && this.lowerDomeMesh.material) {
-      this.lowerDomeMesh.material.opacity = 0.03;
+    if (this.zenithRotateLabel) {
+      this.zenithRotateLabel.visible = false;
+      this.zenithRotateLabel.element.style.display = 'none';
     }
 
-    // 5. 虛化動態天體 (太陽、月球、行星)
+    // 3. 完全隱藏中心地球（含大氣層、地軸、觀測者圖釘與日照光源）
+    if (this.earthGroup) {
+      this.earthGroup.visible = false;
+    }
+    if (this.earthMesh) this.earthMesh.visible = false;
+    if (this.earthAtmoMesh) this.earthAtmoMesh.visible = false;
+    if (this.earthAxisLine) this.earthAxisLine.visible = false;
+    if (this.observerPin) this.observerPin.visible = false;
+    if (this.earthSunLight) this.earthSunLight.visible = false;
+
+    // 4. 完全隱藏赤道圈與黃道圈幾何線條及南北天極標籤
+    this.equatorGroup.visible = false;
+    if (this.ncpLabel) {
+      this.ncpLabel.visible = false;
+      this.ncpLabel.element.style.display = 'none';
+    }
+    if (this.scpLabel) {
+      this.scpLabel.visible = false;
+      this.scpLabel.element.style.display = 'none';
+    }
+    this.eclipticGroup.visible = false;
+
+    // 5. 完全隱藏背後的一切天體（太陽、月球、八大行星與冥王星及衛星）
+    this.dynamicBodiesGroup.visible = false;
     Object.values(this.dynamicBodyMap).forEach((b) => {
-      if (b.mesh && b.mesh.material) {
-        if (b.mesh.userData.baseOpacity === undefined) {
-          b.mesh.userData.baseOpacity = b.mesh.material.opacity !== undefined ? b.mesh.material.opacity : 1.0;
-        }
-        b.mesh.material.opacity = 0.15;
-      }
-      if (b.labelObj && b.labelObj.element) {
+      if (b.mesh) b.mesh.visible = false;
+      if (b.haloMesh) b.haloMesh.visible = false;
+      if (b.labelObj) {
+        b.labelObj.visible = false;
+        b.labelObj.element.style.display = 'none';
         b.labelObj.element.classList.add('muted-body-label');
       }
     });
 
-    // 6. 深度虛化其他非選中星座，並強烈突顯當前選中星座
+    // 6. 其他非選中星座全部隱藏；選中星座全亮聚焦
     Object.values(this.constellationMap).forEach((entry) => {
       if (entry.c.id !== selectedConstellationId) {
-        entry.labelObj.element.classList.add('muted-constellation-label');
-        entry.lineMat.opacity = entry.baseLineOpacity * 0.10;
-        entry.lineMat.color.copy(entry.baseLineColorObj).multiplyScalar(0.18);
+        if (entry.group) entry.group.visible = false;
+        if (entry.labelObj) {
+          entry.labelObj.visible = false;
+          entry.labelObj.element.style.display = 'none';
+          entry.labelObj.element.classList.add('muted-constellation-label');
+        }
         entry.starEntries.forEach((s) => {
-          s.mesh.scale.setScalar(0.82);
-          s.mesh.material.opacity = 0.12;
-          s.mesh.material.color.copy(s.baseColorObj).multiplyScalar(0.18);
+          s.mesh.visible = false;
           s.haloMesh.visible = false;
           s.detailLabel.visible = false;
           s.detailLabel.element.style.display = 'none';
-          s.detailLabel.element.classList.remove('is-visible');
         });
       } else {
-        // 當前選中星座：高光飽和、星芒璀璨、恆星放大 1.4 倍
-        entry.labelObj.element.classList.remove('muted-constellation-label');
+        if (entry.group) entry.group.visible = true;
+        if (entry.labelObj) {
+          entry.labelObj.visible = true;
+          entry.labelObj.element.style.display = '';
+          entry.labelObj.element.classList.remove('muted-constellation-label');
+        }
         entry.lineMat.opacity = 1.0;
         entry.lineMat.color.setHex(entry.baseLineColorHex);
         entry.starEntries.forEach((s) => {
+          s.mesh.visible = true;
           s.mesh.scale.setScalar(1.4);
           s.mesh.material.opacity = 1.0;
           s.mesh.material.color.setHex(s.baseColorHex);
@@ -1512,8 +1575,20 @@ export class CelestialGlobeModel {
   updateHorizonClippedLabels() {
     if (!this.isHorizonTop) return;
 
+    const isConstellationSelected = Boolean(
+      this.activeHighlight && this.activeHighlight.type === 'Constellation'
+    );
+    const selectedId = isConstellationSelected ? this.activeHighlight.constellationId : null;
+
     // 1. 星座標籤 (若星座所有恆星均在地平面以下，則完全隱藏)
     Object.values(this.constellationMap).forEach((cEntry) => {
+      if (isConstellationSelected && cEntry.c.id !== selectedId) {
+        if (cEntry.labelObj) {
+          cEntry.labelObj.visible = false;
+          cEntry.labelObj.element.style.display = 'none';
+        }
+        return;
+      }
       const centerWorldY = cEntry.c.centerDirection
         ? cEntry.c.centerDirection.clone().applyQuaternion(this.group.quaternion).y
         : 0;
@@ -1539,6 +1614,33 @@ export class CelestialGlobeModel {
         }
       });
     });
+
+    // 當處於選中星座聚光狀態時，其他背後天體標籤皆保持隱藏
+    if (isConstellationSelected) {
+      if (this.sunLabel) {
+        this.sunLabel.visible = false;
+        this.sunLabel.element.style.display = 'none';
+      }
+      if (this.moonLabel) {
+        this.moonLabel.visible = false;
+        this.moonLabel.element.style.display = 'none';
+      }
+      Object.values(this.planetMeshes).forEach((pObj) => {
+        if (pObj && pObj.lbl) {
+          pObj.lbl.visible = false;
+          pObj.lbl.element.style.display = 'none';
+        }
+      });
+      if (this.ncpLabel) {
+        this.ncpLabel.visible = false;
+        this.ncpLabel.element.style.display = 'none';
+      }
+      if (this.scpLabel) {
+        this.scpLabel.visible = false;
+        this.scpLabel.element.style.display = 'none';
+      }
+      return;
+    }
 
     // 2. 太陽與月球
     if (this.currentEphemeris) {
@@ -1579,8 +1681,20 @@ export class CelestialGlobeModel {
   }
 
   _restoreAllLabelsVisibility() {
+    const isConstellationSelected = Boolean(
+      this.activeHighlight && this.activeHighlight.type === 'Constellation'
+    );
+    const selectedId = isConstellationSelected ? this.activeHighlight.constellationId : null;
+
     const vis = this.showLabelsOption;
     Object.values(this.constellationMap).forEach((cEntry) => {
+      if (isConstellationSelected && cEntry.c.id !== selectedId) {
+        if (cEntry.labelObj) {
+          cEntry.labelObj.visible = false;
+          cEntry.labelObj.element.style.display = 'none';
+        }
+        return;
+      }
       if (cEntry.labelObj) {
         cEntry.labelObj.visible = vis;
         cEntry.labelObj.element.style.display = vis ? '' : 'none';
@@ -1594,6 +1708,8 @@ export class CelestialGlobeModel {
         }
       });
     });
+
+    if (isConstellationSelected) return;
 
     if (this.sunLabel) {
       this.sunLabel.visible = vis;
@@ -1621,23 +1737,34 @@ export class CelestialGlobeModel {
   }
 
   setLayerVisibility(options) {
+    const isConstellationSelected = Boolean(
+      this.activeHighlight && this.activeHighlight.type === 'Constellation'
+    );
+
     if (options.zodiac !== undefined) this.zodiacGroup.visible = options.zodiac;
-    if (options.ecliptic !== undefined) this.eclipticGroup.visible = options.ecliptic;
-    if (options.equator !== undefined) this.equatorGroup.visible = options.equator;
+    if (options.ecliptic !== undefined) {
+      if (!isConstellationSelected) this.eclipticGroup.visible = options.ecliptic;
+    }
+    if (options.equator !== undefined) {
+      if (!isConstellationSelected) this.equatorGroup.visible = options.equator;
+    }
     if (options.otherConst !== undefined) this.otherConstGroup.visible = options.otherConst;
     if (options.horizonPlane !== undefined) {
-      this.horizonGroup.visible = options.horizonPlane;
-      if (this.zenithRotateLabel) {
-        const showZenith = !this.isHorizonTop && options.horizonPlane;
-        this.zenithRotateLabel.visible = showZenith;
-        this.zenithRotateLabel.element.style.display = showZenith ? '' : 'none';
-      }
-      this.cardinalLabels.forEach((lbl) => {
-        lbl.visible = options.horizonPlane;
-        lbl.element.style.display = options.horizonPlane ? '' : 'none';
-      });
-      if (this.lowerDomeMesh) {
-        this.lowerDomeMesh.visible = !this.isHorizonTop && options.horizonPlane;
+      this.showHorizonOption = options.horizonPlane;
+      if (!isConstellationSelected) {
+        this.horizonGroup.visible = options.horizonPlane;
+        if (this.zenithRotateLabel) {
+          const showZenith = !this.isHorizonTop && options.horizonPlane;
+          this.zenithRotateLabel.visible = showZenith;
+          this.zenithRotateLabel.element.style.display = showZenith ? '' : 'none';
+        }
+        this.cardinalLabels.forEach((lbl) => {
+          lbl.visible = options.horizonPlane;
+          lbl.element.style.display = options.horizonPlane ? '' : 'none';
+        });
+        if (this.lowerDomeMesh) {
+          this.lowerDomeMesh.visible = !this.isHorizonTop && options.horizonPlane;
+        }
       }
     }
     if (options.labels !== undefined) {

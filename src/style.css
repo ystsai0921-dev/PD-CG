@@ -1128,19 +1128,17 @@ input:focus {
   animation: starLabelPulse 0.55s ease-in-out 3 forwards;
 }
 
-/* 當選中某星座時，非選中星座與動態星體的標籤深度虛化 */
+/* 當選中某星座時，非選中星座與背後動態星體的標籤完全隱藏 */
 .celestial-label.muted-constellation-label {
-  opacity: 0.1 !important;
-  filter: blur(0.4px);
+  display: none !important;
+  opacity: 0 !important;
   pointer-events: none;
-  transition: opacity 0.35s ease, filter 0.35s ease;
 }
 
 .celestial-label.muted-body-label {
-  opacity: 0.15 !important;
-  filter: blur(0.4px);
+  display: none !important;
+  opacity: 0 !important;
   pointer-events: none;
-  transition: opacity 0.35s ease, filter 0.35s ease;
 }
 
 @keyframes starLabelPulse {
