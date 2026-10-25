@@ -9,6 +9,40 @@ import {
 } from '../utils/astronomy.js';
 import { createEarthTextures } from '../utils/earthTexture.js';
 
+export const CONSTELLATION_ART_MAP = {
+  Aries: 'aries.png',
+  Taurus: 'taurus.png',
+  Gemini: 'gemini.png',
+  Cancer: 'cancer.png',
+  Leo: 'leo.png',
+  Virgo: 'virgo.png',
+  Libra: 'libra.png',
+  Scorpius: 'scorpius.png',
+  Sagittarius: 'sagittarius.png',
+  Capricornus: 'capricornus.png',
+  Aquarius: 'aquarius.png',
+  Pisces: 'pisces.png',
+  UrsaMinor: 'ursa-minor.png',
+  UrsaMajor: 'ursa-major.png',
+  Cassiopeia: 'cassiopeia.png',
+  Orion: 'orion.png',
+  CanisMajor: 'canis-major.png',
+  CanisMinor: 'canis-minor.png',
+  Lyra: 'lyra.png',
+  Aquila: 'aquila.png',
+  Cygnus: 'cygnus.png',
+  Bootes: 'bootes.png',
+  Auriga: 'auriga.png',
+  Pegasus: 'pegasus.png',
+  Andromeda: 'andromeda.png',
+  Perseus: 'perseus.png',
+  Cepheus: 'cepheus.png',
+  Crux: 'crux.png',
+  Centaurus: 'centaurus.png',
+  Carina: 'argonavis.png',
+  Corvus: 'corvus.png'
+};
+
 const GLOBE_RADIUS = 100;
 const EARTH_RADIUS = 6.48; // 地球模型大小縮小 10% (原 7.2 -> 6.48)
 
@@ -74,6 +108,7 @@ export class CelestialGlobeModel {
     this.activeHighlight = null;
     this.flashWhiteColor = new THREE.Color(0xffffff);
     this.flashGoldColor = new THREE.Color(0xfde047);
+    this.textureLoader = new THREE.TextureLoader();
 
     this.zenithVec = new THREE.Vector3(0, 1, 0);
     this.zenithToWorldUpQuat = new THREE.Quaternion();
@@ -529,9 +564,54 @@ export class CelestialGlobeModel {
     c.zoomDistance = zoomDistance;
     c.labelObject = labelObj;
 
+    // 建立星座背後 3D 古典意象插圖網格 (Constellation Artwork Mesh)
+    const artFilename = CONSTELLATION_ART_MAP[c.id];
+    let artMesh = null;
+    let artMat = null;
+
+    if (artFilename) {
+      const artSize = Math.max(48, Math.min(115, maxSpread * 2.35 + 14));
+      const artGeo = new THREE.PlaneGeometry(artSize, artSize);
+
+      const texture = this.textureLoader.load(`./public/images/constellations/${artFilename}`);
+
+      const artColorHex = isZodiac ? 0xfef08a : 0x7dd3fc;
+      artMat = new THREE.MeshBasicMaterial({
+        map: texture,
+        color: artColorHex,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+
+      artMesh = new THREE.Mesh(artGeo, artMat);
+
+      // 位置：恆星與連線在 r = 100，意象圖放置於 r = 97.5（剛好在星座連線正後方）
+      artMesh.position.copy(centerDir.clone().multiplyScalar(GLOBE_RADIUS * 0.975));
+
+      // 姿態：法線指向外側 centerDir，上方 (+Y) 指向北天極 NCP 投影方向
+      const normal = centerDir.clone().normalize();
+      const ncp = new THREE.Vector3(0, 1, 0);
+      let upVec = new THREE.Vector3().subVectors(ncp, normal.clone().multiplyScalar(ncp.dot(normal)));
+      if (upVec.lengthSq() < 1e-4) {
+        upVec = new THREE.Vector3(0, 0, -1);
+      } else {
+        upVec.normalize();
+      }
+      const rightVec = new THREE.Vector3().crossVectors(upVec, normal).normalize();
+      const basisMat = new THREE.Matrix4().makeBasis(rightVec, upVec, normal);
+      artMesh.quaternion.setFromRotationMatrix(basisMat);
+      artMesh.visible = false;
+      cGroup.add(artMesh);
+    }
+
     this.constellationMap[c.id] = {
       c,
       group: cGroup,
+      artMesh,
+      artMat,
       isZodiac,
       starEntries,
       lineMat,
@@ -664,6 +744,10 @@ export class CelestialGlobeModel {
     // 6. 復原所有星座
     Object.values(this.constellationMap).forEach((entry) => {
       if (entry.group) entry.group.visible = true;
+      if (entry.artMesh) {
+        entry.artMesh.visible = false;
+        entry.artMesh.material.opacity = 0;
+      }
       if (entry.labelObj && entry.labelObj.element) {
         entry.labelObj.visible = this.showLabelsOption;
         entry.labelObj.element.style.display = this.showLabelsOption ? '' : 'none';
@@ -847,10 +931,14 @@ export class CelestialGlobeModel {
       }
     });
 
-    // 6. 其他非選中星座全部隱藏；選中星座全亮聚焦
+    // 6. 其他非選中星座全部隱藏；選中星座全亮聚焦並在其背後投射古典意象圖
     Object.values(this.constellationMap).forEach((entry) => {
       if (entry.c.id !== selectedConstellationId) {
         if (entry.group) entry.group.visible = false;
+        if (entry.artMesh) {
+          entry.artMesh.visible = false;
+          entry.artMesh.material.opacity = 0;
+        }
         if (entry.labelObj) {
           entry.labelObj.visible = false;
           entry.labelObj.element.style.display = 'none';
@@ -864,6 +952,11 @@ export class CelestialGlobeModel {
         });
       } else {
         if (entry.group) entry.group.visible = true;
+        // 核心：在選中星座背後顯現古典意象圖，並發出柔和星芒光輝
+        if (entry.artMesh) {
+          entry.artMesh.visible = true;
+          entry.artMesh.material.opacity = 0.85;
+        }
         if (entry.labelObj) {
           entry.labelObj.visible = true;
           entry.labelObj.element.style.display = '';
@@ -1354,6 +1447,15 @@ export class CelestialGlobeModel {
       if (this.activeHighlight.type === 'Constellation') {
         const entry = this.constellationMap[this.activeHighlight.constellationId];
         if (entry) {
+          if (entry.artMesh && entry.artMesh.material) {
+            entry.artMesh.visible = true;
+            const targetArtOpacity = 0.82 + 0.08 * Math.sin(timeSec * 2.4);
+            entry.artMesh.material.opacity = THREE.MathUtils.lerp(
+              entry.artMesh.material.opacity,
+              targetArtOpacity,
+              0.15
+            );
+          }
           entry.lineMat.opacity = 0.45 + starPulse * 0.55;
           entry.lineMat.color.lerpColors(entry.baseLineColorObj, this.flashWhiteColor, starPulse * 0.7);
           entry.starEntries.forEach((s) => {

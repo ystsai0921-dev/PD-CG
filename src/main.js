@@ -1,8 +1,9 @@
-import { SceneManager } from './core/SceneManager.js?v=20261025_04';
-import { SkyScreenView } from './models/SkyScreenView.js?v=20261025_04';
-import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261025_04';
-import { ZODIAC_CONSTELLATIONS, OTHER_CONSTELLATIONS } from './data/zodiacData.js?v=20261025_04';
-import { getCelestialBodyPhotos, renderPhotoGalleryHtml, getPhotoUrl } from './data/celestialImages.js?v=20261025_04';
+import { SceneManager } from './core/SceneManager.js?v=20261025_05';
+import { SkyScreenView } from './models/SkyScreenView.js?v=20261025_05';
+import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261025_05';
+import { ZODIAC_CONSTELLATIONS, OTHER_CONSTELLATIONS } from './data/zodiacData.js?v=20261025_05';
+import { getCelestialBodyPhotos, renderPhotoGalleryHtml, getPhotoUrl } from './data/celestialImages.js?v=20261025_05';
+import { CONSTELLATION_ART_MAP } from './models/CelestialGlobe.js?v=20261025_05';
 
 // 應用程式全域狀態
 const state = {
@@ -389,12 +390,52 @@ function renderSelectionInfo(info, activePhotoIdx = 0) {
     galleryHtml = renderPhotoGalleryHtml(bodyPhotos, activePhotoIdx);
   }
 
+  // 檢查選取物件是否為星座，若是則取得古典意象圖 (Stellarium / Johan Meuris)
+  let constellationArtHtml = '';
+  let constArtData = null;
+  if (info.type === 'Constellation' && info.constellationId) {
+    const artFile = CONSTELLATION_ART_MAP[info.constellationId];
+    if (artFile) {
+      const artUrl = `./public/images/constellations/${artFile}`;
+      constArtData = {
+        url: artUrl,
+        credit: 'Johan Meuris (Stellarium Project) ｜ 自由藝術許可 (FAL)',
+        caption: `${info.title} 古典星座意象圖（神話圖騰與天球星象對應）`
+      };
+      constellationArtHtml = `
+        <div class="const-art-card">
+          <div class="const-art-header">
+            <span>✦ 古典星座意象圖</span>
+            <small>Stellarium Artwork</small>
+          </div>
+          <div class="const-art-img-wrapper" title="點擊在燈箱中檢視高解析度意象圖">
+            <img class="const-art-img" src="${artUrl}" alt="${info.title} 意象圖" />
+            <div class="const-art-badge">🔍 點擊放大</div>
+          </div>
+          <div class="const-art-caption">已在 3D 天球星空背後同步投射此星座意象立體光芒</div>
+        </div>
+      `;
+    }
+  }
+
   els.selectionDetails.innerHTML = `
     <div class="sel-title">${info.title}</div>
     <div class="sel-sub">${info.subtitle || ''}</div>
+    ${constellationArtHtml}
     ${galleryHtml}
     <div class="sel-body">${lines}${extra}</div>
   `;
+
+  // 綁定意象圖點擊放大燈箱事件
+  if (constArtData) {
+    const artWrapper = els.selectionDetails.querySelector('.const-art-img-wrapper');
+    if (artWrapper) {
+      artWrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openCelestialLightbox(constArtData);
+      });
+    }
+  }
 
   // 綁定照片相簿切換與大圖預覽事件
   if (bodyPhotos && bodyPhotos.photos && bodyPhotos.photos.length > 0) {
