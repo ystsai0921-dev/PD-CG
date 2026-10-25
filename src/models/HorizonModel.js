@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import * as Astronomy from 'astronomy-engine';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { altAzToHorizonVector3, raDecToVector3 } from '../utils/astronomy.js?v=20261022_04';
-import { createMoonTextures } from '../utils/moonTexture.js?v=20261022_04';
+import { altAzToHorizonVector3, raDecToVector3 } from '../utils/astronomy.js';
+import { createMoonTextures } from '../utils/moonTexture.js';
 
 const DOME_RADIUS = 75;
 

@@ -47,6 +47,18 @@ export const CONSTELLATION_ART_MAP = Object.fromEntries(
   Object.entries(CONSTELLATION_ART_CONFIG).map(([k, v]) => [k, v.file])
 );
 
+/**
+ * 取得星座古典意象圖在當前環境下的最佳解析 URL（自動相容 GitHub Pages、子目錄與 Vite）
+ */
+export function getConstellationArtUrl(filename) {
+  if (!filename) return '';
+  try {
+    return new URL(`../../public/images/constellations/${filename}`, import.meta.url).href;
+  } catch (e) {
+    return `./public/images/constellations/${filename}`;
+  }
+}
+
 const GLOBE_RADIUS = 100;
 const EARTH_RADIUS = 6.48; // 地球模型大小縮小 10% (原 7.2 -> 6.48)
 
@@ -590,11 +602,12 @@ export class CelestialGlobeModel {
     if (artCfg) {
       const artGeo = new THREE.PlaneGeometry(artSize, artSize);
 
-      const texture = this.textureLoader.load(`./public/images/constellations/${artCfg.file}`);
+      const artPrimaryUrl = getConstellationArtUrl(artCfg.file);
+      const artSecondaryUrl = `./public/images/constellations/${artCfg.file}`;
+      const artTertiaryUrl = `./images/constellations/${artCfg.file}`;
 
       const artColorHex = isZodiac ? 0xfef08a : 0x7dd3fc;
       artMat = new THREE.MeshBasicMaterial({
-        map: texture,
         color: artColorHex,
         transparent: true,
         blending: THREE.AdditiveBlending,
@@ -602,6 +615,31 @@ export class CelestialGlobeModel {
         depthWrite: false,
         side: THREE.DoubleSide
       });
+
+      this.textureLoader.load(
+        artPrimaryUrl,
+        (tex) => {
+          artMat.map = tex;
+          artMat.needsUpdate = true;
+        },
+        undefined,
+        () => {
+          this.textureLoader.load(
+            artSecondaryUrl,
+            (tex) => {
+              artMat.map = tex;
+              artMat.needsUpdate = true;
+            },
+            undefined,
+            () => {
+              this.textureLoader.load(artTertiaryUrl, (tex) => {
+                artMat.map = tex;
+                artMat.needsUpdate = true;
+              });
+            }
+          );
+        }
+      );
 
       artMesh = new THREE.Mesh(artGeo, artMat);
 

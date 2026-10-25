@@ -1,9 +1,9 @@
-import { SceneManager } from './core/SceneManager.js?v=20261025_06';
-import { SkyScreenView } from './models/SkyScreenView.js?v=20261025_05';
-import { computeEphemeris, formatRA } from './utils/astronomy.js?v=20261025_05';
-import { ZODIAC_CONSTELLATIONS, OTHER_CONSTELLATIONS } from './data/zodiacData.js?v=20261025_05';
-import { getCelestialBodyPhotos, renderPhotoGalleryHtml, getPhotoUrl } from './data/celestialImages.js?v=20261025_05';
-import { CONSTELLATION_ART_MAP } from './models/CelestialGlobe.js?v=20261025_05';
+import { SceneManager } from './core/SceneManager.js';
+import { SkyScreenView } from './models/SkyScreenView.js';
+import { computeEphemeris, formatRA } from './utils/astronomy.js';
+import { ZODIAC_CONSTELLATIONS, OTHER_CONSTELLATIONS } from './data/zodiacData.js';
+import { getCelestialBodyPhotos, renderPhotoGalleryHtml, getPhotoUrl } from './data/celestialImages.js';
+import { CONSTELLATION_ART_MAP, getConstellationArtUrl } from './models/CelestialGlobe.js';
 
 // 應用程式全域狀態
 const state = {
@@ -354,13 +354,17 @@ function updateControlModeUI(mode) {
 // 開啟天體實景相片高解析度燈箱 (Lightbox)
 function openCelestialLightbox(photo) {
   if (!els.lightbox.root || !photo) return;
-  const photoUrl = getPhotoUrl(photo.file);
+  const photoUrl = photo.url || getPhotoUrl(photo.file);
   els.lightbox.img.src = photoUrl;
   els.lightbox.img.dataset.fallbackTried = '';
   els.lightbox.img.onerror = () => {
     if (!els.lightbox.img.dataset.fallbackTried) {
       els.lightbox.img.dataset.fallbackTried = '1';
-      els.lightbox.img.src = `/public/images/celestial/${photo.file}`;
+      if (photo.file) {
+        els.lightbox.img.src = `./images/celestial/${photo.file}`;
+      } else if (photo.fallbackUrl) {
+        els.lightbox.img.src = photo.fallbackUrl;
+      }
     }
   };
   els.lightbox.title.textContent = photo.title || '';
@@ -390,15 +394,19 @@ function renderSelectionInfo(info, activePhotoIdx = 0) {
     galleryHtml = renderPhotoGalleryHtml(bodyPhotos, activePhotoIdx);
   }
 
-  // 檢查選取物件是否為星座，若是則取得古典意象圖 (Stellarium / Johan Meuris)
+  // 檢查選取物件是否為星座或星座所屬恆星，若是則取得古典意象圖 (Stellarium / Johan Meuris)
   let constellationArtHtml = '';
   let constArtData = null;
-  if (info.type === 'Constellation' && info.constellationId) {
-    const artFile = CONSTELLATION_ART_MAP[info.constellationId];
+  const targetConstId = info.constellationId || (info.type === 'Constellation' ? info.id : null);
+  if (targetConstId) {
+    const artFile = CONSTELLATION_ART_MAP[targetConstId];
     if (artFile) {
-      const artUrl = `./public/images/constellations/${artFile}`;
+      const artUrl = getConstellationArtUrl(artFile);
+      const fallbackUrl = `./images/constellations/${artFile}`;
       constArtData = {
         url: artUrl,
+        fallbackUrl,
+        title: `${info.title} 古典星座意象圖`,
         credit: 'Johan Meuris (Stellarium Project) ｜ 自由藝術許可 (FAL)',
         caption: `${info.title} 古典星座意象圖（神話圖騰與天球星象對應）`
       };
@@ -409,7 +417,7 @@ function renderSelectionInfo(info, activePhotoIdx = 0) {
             <small>Stellarium Artwork</small>
           </div>
           <div class="const-art-img-wrapper" title="點擊在燈箱中檢視高解析度意象圖">
-            <img class="const-art-img" src="${artUrl}" alt="${info.title} 意象圖" />
+            <img class="const-art-img" src="${artUrl}" alt="${info.title} 意象圖" onerror="if (!this.dataset.fb) { this.dataset.fb='1'; this.src='${fallbackUrl}'; }" />
             <div class="const-art-badge">🔍 點擊放大</div>
           </div>
           <div class="const-art-caption">已在 3D 天球星空背後同步投射此星座意象立體光芒</div>

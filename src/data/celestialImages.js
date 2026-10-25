@@ -441,7 +441,11 @@ export const CELESTIAL_PHOTOS = {
  */
 export function getPhotoUrl(filename) {
   if (!filename) return '';
-  return `./public/images/celestial/${filename}`;
+  try {
+    return new URL(`../../public/images/celestial/${filename}`, import.meta.url).href;
+  } catch (e) {
+    return `./public/images/celestial/${filename}`;
+  }
 }
 
 /**
