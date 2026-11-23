@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PD觀星</title>
   <link rel="icon" type="image/jpeg" href="./public/logo.jpg" />
-  <link rel="stylesheet" href="./src/style.css?v=20261025_09" />
+  <link rel="stylesheet" href="./src/style.css?v=20261123_01" />
   <!-- Import map allows running directly via static server without Node/Vite bundling, while staying 100% compatible with Vite -->
   <script type="importmap">
     {
@@ -83,10 +83,14 @@
             <label class="group-label">日期與時間 (Date &amp; Time)</label>
             <button id="btn-now" class="mini-btn" title="重設為現在時刻">現在 Now</button>
           </div>
-          <div class="field-grid-2">
+          <div class="field-grid-2 date-time-grid">
             <div class="field-item">
               <span class="field-caption">日期 Date</span>
-              <input type="date" id="input-date" />
+              <div class="date-stepper">
+                <button type="button" id="btn-date-prev" class="date-step-btn" title="後退一天 (-1 天)" aria-label="後退一天">−</button>
+                <input type="date" id="input-date" />
+                <button type="button" id="btn-date-next" class="date-step-btn" title="前進一天 (+1 天)" aria-label="前進一天">+</button>
+              </div>
               <span id="lunar-date-note" class="lunar-note">農曆 --</span>
             </div>
             <div class="field-item">
@@ -333,6 +337,6 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js?v=20261025_09"></script>
+  <script type="module" src="./src/main.js?v=20261123_01"></script>
 </body>
 </html>

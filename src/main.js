@@ -37,6 +37,8 @@ const els = {
   inputLat: document.getElementById('input-lat'),
   inputLon: document.getElementById('input-lon'),
   inputDate: document.getElementById('input-date'),
+  btnDatePrev: document.getElementById('btn-date-prev'),
+  btnDateNext: document.getElementById('btn-date-next'),
   inputTime: document.getElementById('input-time'),
   lunarDateNote: document.getElementById('lunar-date-note'),
   sliderDayTime: document.getElementById('slider-day-time'),
@@ -299,6 +301,15 @@ function readDateInputsToState() {
   refreshAstronomy();
 }
 
+// 快速前進或後退天數 (例如 +1 天 或 -1 天)
+function stepDay(offset) {
+  const current = new Date(state.date.getTime());
+  current.setDate(current.getDate() + offset);
+  state.date = current;
+  syncDateInputsFromState();
+  refreshAstronomy();
+}
+
 // 切換三大觀測尺度 (L1 天球儀 / L2 太陽系 / L3 地平日月)
 function switchScale(scaleName) {
   if (state.skyScreenActive) {
@@ -517,6 +528,8 @@ function bindUIEvents() {
   els.inputLon.addEventListener('input', onLatLonInput);
 
   // 日期與時間事件
+  els.btnDatePrev?.addEventListener('click', () => stepDay(-1));
+  els.btnDateNext?.addEventListener('click', () => stepDay(1));
   els.inputDate.addEventListener('change', readDateInputsToState);
   els.inputTime.addEventListener('change', readDateInputsToState);
 

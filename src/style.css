@@ -239,6 +239,55 @@ input:focus {
   gap: 6px;
 }
 
+.date-time-grid {
+  grid-template-columns: 1.4fr 1fr;
+  gap: 6px;
+}
+
+.date-stepper {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+}
+
+.date-stepper input[type="date"] {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 3px;
+}
+
+.date-step-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 27px;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.date-step-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.date-step-btn:active {
+  transform: scale(0.92);
+  background: rgba(56, 189, 248, 0.35);
+}
+
 .field-item {
   display: flex;
   flex-direction: column;
